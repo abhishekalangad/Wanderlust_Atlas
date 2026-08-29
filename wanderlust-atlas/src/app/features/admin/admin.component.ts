@@ -103,14 +103,19 @@ export class AdminComponent implements OnInit {
     if (!file) return;
 
     this.uploadingImage.set(true);
-    const { url, error } = await this.destService.uploadDestinationImage(file);
-    this.uploadingImage.set(false);
-
-    if (!error && url) {
-      this.destForm.patchValue({ image_url: url });
-      this.toast.success('Image uploaded!');
-    } else {
+    try {
+      const { url, error } = await this.destService.uploadDestinationImage(file);
+      if (!error && url) {
+        this.destForm.patchValue({ image_url: url });
+        this.toast.success('Image uploaded!');
+      } else {
+        this.toast.error('Image upload failed. You can also paste an Image URL.');
+      }
+    } catch (e) {
+      console.error('Image upload error:', e);
       this.toast.error('Image upload failed.');
+    } finally {
+      this.uploadingImage.set(false);
     }
   }
 

@@ -192,20 +192,25 @@ export class DestinationsService {
   }
 
   async uploadDestinationImage(file: File): Promise<{ url: string | null; error: any }> {
-    const ext = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
 
-    const { data, error } = await this.supabase.client.storage
-      .from('destination-images')
-      .upload(fileName, file, { cacheControl: '3600', upsert: false });
+      const { data, error } = await this.supabase.client.storage
+        .from('destination-images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
 
-    if (error) return { url: null, error };
+      if (error) return { url: null, error };
 
-    const { data: { publicUrl } } = this.supabase.client.storage
-      .from('destination-images')
-      .getPublicUrl(data.path);
+      const { data: { publicUrl } } = this.supabase.client.storage
+        .from('destination-images')
+        .getPublicUrl(data.path);
 
-    return { url: publicUrl, error: null };
+      return { url: publicUrl, error: null };
+    } catch (err) {
+      console.error('Image upload exception:', err);
+      return { url: null, error: err };
+    }
   }
 
   async getAllUsers(): Promise<any[]> {
