@@ -300,16 +300,24 @@
 }
 
 @media (max-width: 900px) {
-  .profile-header { flex-direction: column; }
-  .profile-stats { justify-content: flex-start; flex-wrap: wrap; }
+  .profile-header { flex-direction: column; align-items: stretch; gap: 24px; }
+  .profile-stats { justify-content: space-around; width: 100%; padding: 16px 0; }
   .avatar-section { flex-direction: column; align-items: center; text-align: center; }
+  .profile-bio { max-width: 100%; }
   .form-row { grid-template-columns: 1fr; }
-  .container { padding: 0 24px; }
+  .container { padding: 0 20px; }
 }
 
 @media (max-width: 600px) {
+  .profile-page { padding-top: 80px; }
   .container { padding: 0 16px; }
-  .bucket-tabs { overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }
-  .tab-btn { white-space: nowrap; flex-shrink: 0; }
+  .bucket-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; padding: 8px 16px; font-size: 0.85rem; }
   .bucket-grid { grid-template-columns: 1fr; }
 }

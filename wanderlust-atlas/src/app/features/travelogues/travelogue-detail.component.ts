@@ -116,20 +116,26 @@ export class TravelogueDetailComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return;
+    this.route.paramMap.subscribe(async params => {
+      const id = params.get('id');
+      if (!id) return;
 
-    const data = await this.travelogueService.getTravelogueById(id);
-    this.loading.set(false);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      this.loading.set(true);
+      this.travelogue.set(null);
 
-    if (data) {
-      this.travelogue.set(data);
-      if (data.pdf_url) {
-        this.safePdfUrl.set(
-          this.sanitizer.bypassSecurityTrustResourceUrl(data.pdf_url)
-        );
+      const data = await this.travelogueService.getTravelogueById(id);
+      this.loading.set(false);
+
+      if (data) {
+        this.travelogue.set(data);
+        if (data.pdf_url) {
+          this.safePdfUrl.set(
+            this.sanitizer.bypassSecurityTrustResourceUrl(data.pdf_url)
+          );
+        }
       }
-    }
+    });
   }
 
   formattedContent(): string {

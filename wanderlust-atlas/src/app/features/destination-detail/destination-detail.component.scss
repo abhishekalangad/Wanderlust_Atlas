@@ -278,10 +278,18 @@
 @media (max-width: 1024px) {
   .detail-layout { grid-template-columns: 1fr; }
   .bucket-action-card { position: static; }
-  .facts-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
-  .detail-body { padding: 40px 24px 0; }
-  .detail-title { font-size: 2.5rem; }
+  .detail-hero { min-height: 380px; height: 55vh; }
+  .detail-hero-content { bottom: 20px; }
+  .detail-body { padding: 32px 16px 0; }
+  .detail-title { font-size: 2.2rem; }
+  .facts-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .fact-card { padding: 14px 12px; }
+}
+
+@media (max-width: 480px) {
+  .facts-grid { grid-template-columns: 1fr; }
+  .detail-subtitle { font-size: 0.95rem; }
 }

@@ -41,17 +41,23 @@ export class DestinationDetailComponent implements OnInit {
   currentItem = () => this.destination() ? this.bucketList.getItemByDestination(this.destination()!.id) : null;
 
   async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return;
+    this.route.paramMap.subscribe(async params => {
+      const id = params.get('id');
+      if (!id) return;
 
-    const dest = await this.destService.getDestinationById(id);
-    this.destination.set(dest);
-    this.loading.set(false);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      this.loading.set(true);
+      this.destination.set(null);
 
-    if (dest) {
-      const related = await this.destService.getRelatedDestinations(dest, 4);
-      this.relatedDestinations.set(related);
-    }
+      const dest = await this.destService.getDestinationById(id);
+      this.destination.set(dest);
+      this.loading.set(false);
+
+      if (dest) {
+        const related = await this.destService.getRelatedDestinations(dest, 4);
+        this.relatedDestinations.set(related);
+      }
+    });
   }
 
   getCategoryLabel(cat: string): string {

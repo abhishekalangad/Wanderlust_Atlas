@@ -112,7 +112,9 @@ form {
 }
 
 @media (max-width: 768px) {
-  .container { padding: 0 24px; }
+  .container { padding: 0 16px; }
   .form-row, .uploads-grid { grid-template-columns: 1fr; }
-  .form-card { padding: 24px; }
+  .form-card { padding: 20px 16px; border-radius: 16px; }
+  .form-actions { flex-direction: column; gap: 12px; }
+  .form-actions button, .form-actions a { width: 100%; justify-content: center; }
 }

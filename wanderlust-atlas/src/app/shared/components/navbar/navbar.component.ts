@@ -11,7 +11,7 @@ import { ToastService } from '../../../core/services/toast.service';
   template: `
     <nav [class.scrolled]="isScrolled()">
       <a routerLink="/" class="nav-logo">
-        <img src="assets/images/destinations/logo.png" alt="Wanderlust Atlas Logo" class="logo-img">
+        <img src="assets/images/logo.png" alt="Wanderlust Atlas Logo" class="logo-img">
         <span>Wanderlust Atlas</span>
       </a>
 
@@ -24,6 +24,11 @@ import { ToastService } from '../../../core/services/toast.service';
         }
         @if (auth.isAdmin()) {
           <li><a routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">Admin</a></li>
+        }
+        @if (auth.isLoggedIn()) {
+          <li class="mobile-only-link"><a (click)="signOut(); closeMenu()" class="text-coral">Sign Out</a></li>
+        } @else {
+          <li class="mobile-only-link"><a routerLink="/auth" (click)="closeMenu()" class="text-coral">Sign In / Sign Up</a></li>
         }
       </ul>
 
