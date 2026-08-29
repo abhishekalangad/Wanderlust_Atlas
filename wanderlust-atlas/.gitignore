@@ -1,12 +1,10 @@
 # Dependencies
 node_modules/
 
-# Environment files containing personal keys (IGNORED FOR PRIVACY)
+# Environment local overrides (Keep environment.ts & environment.prod.ts committed for Vercel/Netlify builds)
 .env
-.env.*
+.env.local
 !.env.example
-src/environments/environment.ts
-src/environments/environment.prod.ts
 
 # Build outputs
 dist/
