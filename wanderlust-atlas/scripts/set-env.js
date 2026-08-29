@@ -24,4 +24,4 @@ const envDevConfigFile = `export const environment = {
 fs.writeFileSync(targetPath, envConfigFile);
 fs.writeFileSync(targetDevPath, envDevConfigFile);
 
-console.log('Environment configuration generated dynamically!');
+console.log('Environment configuration generated from environment variables.');
