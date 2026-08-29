@@ -301,8 +301,15 @@
 
 @media (max-width: 900px) {
   .profile-header { flex-direction: column; }
-  .profile-stats { justify-content: flex-start; }
+  .profile-stats { justify-content: flex-start; flex-wrap: wrap; }
   .avatar-section { flex-direction: column; align-items: center; text-align: center; }
   .form-row { grid-template-columns: 1fr; }
   .container { padding: 0 24px; }
+}
+
+@media (max-width: 600px) {
+  .container { padding: 0 16px; }
+  .bucket-tabs { overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; }
+  .bucket-grid { grid-template-columns: 1fr; }
 }
