@@ -1,4 +1,5 @@
 {
+  "outputDirectory": "wanderlust-atlas/dist/wanderlust-atlas/browser",
   "rewrites": [
     {
       "source": "/(.*)",
