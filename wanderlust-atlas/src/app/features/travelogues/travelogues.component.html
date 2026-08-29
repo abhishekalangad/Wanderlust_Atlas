@@ -1,0 +1,72 @@
+<div class="travelogues-page">
+  <div class="travelogues-header">
+    <div class="container">
+      <span class="section-tag">Travel Journals & Stories</span>
+      <h1 class="travelogues-title">Wanderlust <em>Travelogues</em></h1>
+      <p class="travelogues-sub">Personal travel logs, trip itineraries, and downloadable PDF guides shared by travellers worldwide.</p>
+      
+      @if (auth.isLoggedIn()) {
+        <div class="header-action">
+          <a routerLink="/travelogues/new" class="btn-primary">+ Share Your Travelogue</a>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="container travelogues-body">
+    @if (loading()) {
+      <app-loader />
+    } @else if (travelogues().length === 0) {
+      <div class="empty-state">
+        <span>📖</span>
+        <h3>No travelogues shared yet</h3>
+        <p>Be the first to share your travel story or PDF journal!</p>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/travelogues/new" class="btn-primary">Write a Travelogue</a>
+        } @else {
+          <a routerLink="/auth" class="btn-primary">Sign In to Write</a>
+        }
+      </div>
+    } @else {
+      <div class="travelogues-grid">
+        @for (item of travelogues(); track item.id) {
+          <article class="travelogue-card glass-card">
+            <div class="card-img-wrap">
+              <img [src]="item.cover_image_url || 'assets/images/placeholder.jpg'" [alt]="item.title">
+              @if (item.pdf_url) {
+                <span class="pdf-badge">📄 PDF Guide Included</span>
+              }
+            </div>
+
+            <div class="card-content">
+              @if (item.destination) {
+                <span class="dest-chip">📍 {{ item.destination.name }}, {{ item.destination.country }}</span>
+              }
+
+              <h2 class="card-title">
+                <a [routerLink]="['/travelogues', item.id]">{{ item.title }}</a>
+              </h2>
+
+              <p class="card-excerpt">{{ item.excerpt || (item.content.slice(0, 140) + '...') }}</p>
+
+              <div class="card-footer">
+                <div class="author-info">
+                  @if (item.profile?.avatar_url) {
+                    <img [src]="item.profile!.avatar_url!" class="author-avatar" [alt]="item.profile?.username">
+                  } @else {
+                    <div class="author-avatar-ph">{{ (item.profile?.username ?? 'U').charAt(0).toUpperCase() }}</div>
+                  }
+                  <span>by {{ item.profile?.full_name || item.profile?.username || 'Traveller' }}</span>
+                </div>
+
+                <a [routerLink]="['/travelogues', item.id]" class="read-btn">Read Story →</a>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<app-footer />

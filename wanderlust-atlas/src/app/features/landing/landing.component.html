@@ -1,0 +1,173 @@
+<!-- HERO SECTION -->
+<section id="hero">
+  <video class="hero-video" autoplay muted loop playsinline [muted]="true">
+    <source src="assets/videos/hero.mp4" type="video/mp4">
+  </video>
+  <div class="hero-overlay"></div>
+  <canvas #heroCanvas class="hero-particles"></canvas>
+
+  <div class="hero-content">
+    <!-- <span class="hero-eyebrow">✦ The World Awaits</span> -->
+    <h1 class="hero-title">
+      Dream it.<br>
+      <em>List it.</em><br>
+      Live it.
+    </h1>
+    <p class="hero-sub">
+      Your personal travel bucket list, elevated. Discover extraordinary
+      destinations, curate your dream journeys, and turn wanderlust into reality.
+    </p>
+    <div class="hero-buttons">
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/explore" class="btn-primary">Explore Destinations</a>
+        <a routerLink="/profile" class="btn-ghost">My Bucket List</a>
+      } @else {
+        <a routerLink="/auth" class="btn-primary">Start Your List</a>
+        <a routerLink="/explore" class="btn-ghost">Browse Destinations</a>
+      }
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <span>Scroll to explore</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- STATS SECTION -->
+<section id="stats">
+  <div class="stats-grid">
+    @for (counter of counters; track counter.label) {
+      <div class="stat-item">
+        <div class="stat-number">
+          {{ counter.value | number }}<span>{{ counter.suffix }}</span>
+        </div>
+        <div class="stat-label">{{ counter.label }}</div>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- FEATURED DESTINATIONS -->
+<section id="destinations">
+  <div class="section-header" appReveal>
+    <span class="section-tag">Handpicked for You</span>
+    <h2 class="section-title">
+      Places That Will<br>
+      <em>Change Your Life</em>
+    </h2>
+    <p class="section-sub">
+      From ancient wonders to hidden paradises — every destination is a story waiting to be written.
+    </p>
+  </div>
+
+  <div class="destinations-grid">
+    @if (loadingDestinations()) {
+      @for (s of skeletons; track $index) {
+        <app-destination-card [loading]="true" />
+      }
+    } @else {
+      @for (dest of featuredDestinations(); track dest.id) {
+        <app-destination-card [destination]="dest" />
+      }
+    }
+  </div>
+
+  <div class="destinations-cta" appReveal>
+    <a routerLink="/explore" class="btn-ghost">
+      View All Destinations →
+    </a>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-header" appReveal>
+    <span class="section-tag">Simple as 1-2-3</span>
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-sub">
+      From discovery to departure — your entire travel journey in one beautiful platform.
+    </p>
+  </div>
+
+  <div class="how-grid">
+    @for (step of howSteps; track step.step; let i = $index) {
+      <div class="how-card" appReveal [class]="'reveal-delay-' + (i + 1)">
+        <span class="how-icon">{{ step.icon }}</span>
+        <p class="how-step">{{ step.step }}</p>
+        <h3 class="how-title">{{ step.title }}</h3>
+        <p class="how-desc">{{ step.desc }}</p>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- CTA TEASER -->
+<section id="teaser">
+  <div class="teaser-inner">
+    <div class="teaser-left">
+      <div class="section-header" style="text-align: left; margin-bottom: 40px" appReveal>
+        <span class="section-tag">Your Journey Starts Here</span>
+        <h2 class="section-title">
+          Build Your<br>
+          <em>Perfect</em> Bucket List
+        </h2>
+        <p class="section-sub">
+          Organize your dreams by status, set target years, add personal notes,
+          and track your progress from dreaming to completed.
+        </p>
+      </div>
+
+      <div class="teaser-features" appReveal>
+        @for (feature of teaserFeatures; track feature.icon) {
+          <div class="teaser-feature">
+            <span class="feature-icon">{{ feature.icon }}</span>
+            <div>
+              <h4>{{ feature.title }}</h4>
+              <p>{{ feature.desc }}</p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="teaser-actions" appReveal>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/profile" class="btn-primary">View My List</a>
+        } @else {
+          <a routerLink="/auth" class="btn-primary">Create Free Account</a>
+        }
+      </div>
+    </div>
+
+    <div class="teaser-right" appReveal>
+      <div class="mock-bucket-list">
+        <div class="mock-header">
+          <span class="mock-title">My Bucket List</span>
+          <span class="mock-count">{{ featuredDestinations().length }}</span>
+        </div>
+        <div class="mock-items">
+          @for (dest of featuredDestinations().slice(0, 4); track dest.id) {
+            <div class="mock-item">
+              <img
+                [src]="dest.image_url || 'assets/images/placeholder.jpg'"
+                [alt]="dest.name"
+                class="mock-item-img"
+              >
+              <div class="mock-item-info">
+                <span class="mock-item-name">{{ dest.name }}</span>
+                <span class="mock-item-country">{{ dest.country }}</span>
+              </div>
+              <span class="mock-item-status dreaming">✨ Dreaming</span>
+            </div>
+          }
+        </div>
+        <a routerLink="/auth" class="mock-cta">
+          {{ auth.isLoggedIn() ? 'View Full List →' : 'Start Your List →' }}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<app-footer />

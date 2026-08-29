@@ -1,0 +1,118 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 15, 30, 0.85);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 580px;
+  padding: 36px;
+  border-radius: 24px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.7);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 16px;
+}
+
+.modal-tag {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--coral);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.modal-sub { font-size: 0.85rem; color: var(--white-60); }
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--white-60);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+
+  &:hover { color: white; }
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.status-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--white-60);
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: 'Inter', sans-serif;
+
+  .icon { font-size: 1.2rem; }
+  .label { font-size: 0.78rem; font-weight: 500; }
+
+  &.active {
+    background: rgba(255, 107, 74, 0.15);
+    border-color: var(--coral);
+    color: white;
+    box-shadow: 0 4px 16px rgba(255, 107, 74, 0.3);
+  }
+
+  &:hover:not(.active) { background: rgba(255, 255, 255, 0.1); color: white; }
+}
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+
+  .btn-primary { flex: 1; justify-content: center; }
+}
+
+@media (max-width: 600px) {
+  .status-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr; }
+  .modal-card { padding: 24px; }
+}

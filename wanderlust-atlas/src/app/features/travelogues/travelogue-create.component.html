@@ -1,0 +1,82 @@
+<div class="create-travelogue-page">
+  <div class="page-header">
+    <div class="container">
+      <span class="section-tag">Share Your Journey</span>
+      <h1 class="page-title">Write a <em>Travelogue</em></h1>
+      <p class="page-sub">Publish your travel experiences, itineraries, or upload a custom PDF guide.</p>
+    </div>
+  </div>
+
+  <div class="container page-body">
+    <div class="form-card glass-card">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" class="form-input" placeholder="e.g. 10 Days Wandering Through Kyoto & Arashiyama" formControlName="title">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Related Destination (Optional)</label>
+            <select class="form-select" formControlName="destination_id">
+              <option value="">Select a destination…</option>
+              @for (d of destinations(); track d.id) {
+                <option [value]="d.id">{{ d.name }} ({{ d.country }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Short Excerpt</label>
+            <input type="text" class="form-input" placeholder="A brief summary of your travel story…" formControlName="excerpt">
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label>Story Content * (Markdown / Paragraphs)</label>
+          <textarea class="form-textarea" rows="10" placeholder="Write your travel story here…" formControlName="content"></textarea>
+        </div>
+
+        <!-- UPLOAD SECTION: Cover Photo & PDF Journal -->
+        <div class="uploads-grid">
+          <div class="upload-box">
+            <label class="upload-title">Cover Image</label>
+            @if (form.get('cover_image_url')?.value) {
+              <img [src]="form.get('cover_image_url')!.value" class="cover-preview" alt="Cover preview">
+            }
+            <label class="upload-btn" [class.loading]="uploadingImage()">
+              {{ uploadingImage() ? '⏳ Uploading...' : '📷 Upload Cover Image' }}
+              <input type="file" accept="image/*" (change)="onImageUpload($event)" hidden>
+            </label>
+            <input type="text" class="form-input" formControlName="cover_image_url" placeholder="or paste Image URL">
+          </div>
+
+          <div class="upload-box pdf-box">
+            <label class="upload-title">📄 Attach PDF Travel Guide / Itinerary</label>
+            <p class="upload-desc">Upload a PDF document that other users can read or download.</p>
+
+            @if (pdfFileName()) {
+              <div class="pdf-attached-badge">
+                ✅ Attached: <strong>{{ pdfFileName() }}</strong>
+              </div>
+            }
+
+            <label class="upload-btn pdf-btn" [class.loading]="uploadingPdf()">
+              {{ uploadingPdf() ? '⏳ Uploading PDF...' : '📄 Choose PDF File' }}
+              <input type="file" accept="application/pdf" (change)="onPdfUpload($event)" hidden>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            {{ loading() ? 'Publishing...' : '🚀 Publish Travelogue' }}
+          </button>
+          <a routerLink="/travelogues" class="btn-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<app-footer />

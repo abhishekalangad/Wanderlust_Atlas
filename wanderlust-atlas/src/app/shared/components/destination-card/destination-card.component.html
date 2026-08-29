@@ -1,0 +1,57 @@
+<div class="dest-card" appTilt [class.skeleton]="loading">
+  @if (loading) {
+    <div class="skeleton-img"></div>
+    <div class="skeleton-content">
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line medium"></div>
+    </div>
+  } @else if (destination) {
+    <img
+      [src]="destination.image_url || 'assets/images/placeholder.jpg'"
+      [alt]="destination.name"
+      loading="lazy"
+      (error)="onImageError($event)"
+    >
+    <div class="dest-card-overlay"></div>
+    <div class="dest-card-content">
+      <p class="dest-mood">
+        {{ destination.category | categoryIcon }} {{ formatMoodTags() }}
+      </p>
+      <h3 class="dest-name">{{ destination.name }}</h3>
+      <p class="dest-country">{{ destination.country }}, {{ destination.continent }}</p>
+
+      @if (destination.avg_cost_usd) {
+        <p class="dest-cost">From ${{ formatCost(destination.avg_cost_usd) }} / person</p>
+      }
+
+      <div class="dest-actions">
+        <a [routerLink]="['/destination', destination.id]" class="dest-view-btn">
+          View Details
+        </a>
+        @if (isInList()) {
+          <button class="dest-add-btn added" (click)="removeFromList($event)">
+            {{ currentStatus()?.icon }} {{ currentStatus()?.label }}
+          </button>
+        } @else {
+          <button class="dest-add-btn" (click)="addToList($event)">
+            + Add to List
+          </button>
+        }
+      </div>
+
+      @if (destination.is_featured) {
+        <span class="featured-badge">✦ Featured</span>
+      }
+    </div>
+  }
+</div>
+
+@if (showModal() && destination) {
+  <app-add-bucket-list-modal
+    [destination]="destination"
+    [existingItem]="getItemByDestination()"
+    (closed)="showModal.set(false)"
+    (saved)="onModalSaved($event)"
+  />
+}

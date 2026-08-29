@@ -1,0 +1,154 @@
+.travelogues-page { min-height: 100vh; background: var(--navy); }
+
+.travelogues-header {
+  padding: 140px 0 60px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255,107,74,0.06) 0%, transparent 100%);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.travelogues-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+
+  em { color: var(--coral); font-style: italic; }
+}
+
+.travelogues-sub { color: var(--white-60); font-size: 1rem; max-width: 600px; margin: 0 auto 28px; }
+
+.header-action { display: flex; justify-content: center; }
+
+.travelogues-body { padding-top: 60px; padding-bottom: 100px; }
+
+.travelogues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 28px;
+}
+
+.travelogue-card {
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s, box-shadow 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  }
+}
+
+.card-img-wrap {
+  position: relative;
+  height: 200px;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.pdf-badge {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(10, 15, 30, 0.85);
+  border: 1px solid rgba(245, 200, 66, 0.4);
+  color: var(--amber);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 100px;
+  backdrop-filter: blur(8px);
+}
+
+.card-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.dest-chip {
+  font-size: 0.75rem;
+  color: var(--coral);
+  margin-bottom: 10px;
+  display: block;
+  font-weight: 500;
+}
+
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 12px;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+    &:hover { color: var(--coral); }
+  }
+}
+
+.card-excerpt {
+  color: var(--white-60);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  flex: 1;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  span { font-size: 0.82rem; color: var(--white-60); }
+}
+
+.author-avatar, .author-avatar-ph {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+}
+
+.author-avatar { object-fit: cover; }
+.author-avatar-ph {
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; color: white;
+}
+
+.read-btn {
+  font-size: 0.85rem;
+  color: var(--coral);
+  text-decoration: none;
+  font-weight: 500;
+  transition: transform 0.2s;
+
+  &:hover { transform: translateX(3px); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--white-60);
+
+  span { font-size: 4rem; margin-bottom: 16px; display: block; }
+  h3 { font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 8px; color: white; }
+  p { margin-bottom: 24px; }
+}
+
+@media (max-width: 768px) {
+  .travelogues-header { padding: 120px 24px 40px; }
+  .travelogues-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,131 @@
+<div class="suggest-page">
+  <div class="page-header">
+    <div class="container">
+      <span class="section-tag">Community Submissions</span>
+      <h1 class="page-title">Suggest a <em>Destination</em></h1>
+      <p class="page-sub">Know an incredible destination? Submit it for admin approval to be featured on Wanderlust Atlas.</p>
+    </div>
+  </div>
+
+  <div class="container page-body">
+    <div class="form-card glass-card">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- Core Info -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Destination Name</label>
+            <input type="text" class="form-input" placeholder="e.g. Positano Amalfi Coast" formControlName="name">
+          </div>
+          <div class="form-group">
+            <label>Country</label>
+            <input type="text" class="form-input" placeholder="e.g. Italy" formControlName="country">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Continent</label>
+            <select class="form-select" formControlName="continent">
+              <option value="">Select continent…</option>
+              @for (c of continents; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select class="form-select" formControlName="category">
+              <option value="">Select category…</option>
+              @for (cat of categories; track cat.value) {
+                <option [value]="cat.value">{{ cat.icon }} {{ cat.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Difficulty Level</label>
+            <select class="form-select" formControlName="difficulty">
+              @for (d of difficulties; track d) { <option [value]="d">{{ d | titlecase }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Best Season to Visit</label>
+            <input type="text" class="form-input" placeholder="e.g. May to September" formControlName="best_season">
+          </div>
+        </div>
+
+        <!-- Budget & Duration -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Estimated Avg. Cost per Person (USD)</label>
+            <input type="number" class="form-input" placeholder="e.g. 1800" formControlName="avg_cost_usd">
+          </div>
+          <div class="form-group">
+            <label>Recommended Stay Duration</label>
+            <input type="text" class="form-input" placeholder="e.g. 3–5 Days" formControlName="recommended_duration_days">
+          </div>
+        </div>
+
+        <!-- Travel Logistics (Optional) -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nearest Airport / Hub</label>
+            <input type="text" class="form-input" placeholder="e.g. Naples International (NAP)" formControlName="nearest_airport">
+          </div>
+          <div class="form-group">
+            <label>Local Currency & Language</label>
+            <input type="text" class="form-input" placeholder="e.g. EUR (€) / Italian" formControlName="local_currency_language">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Visa Information / Tips</label>
+            <input type="text" class="form-input" placeholder="e.g. Schengen Visa required for non-EU travellers" formControlName="visa_info">
+          </div>
+          <div class="form-group">
+            <label>Must-Try Food & Activities</label>
+            <input type="text" class="form-input" placeholder="e.g. Limoncello, Cliffside hiking, Boat trip" formControlName="must_try_activities">
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label>Mood Tags (Comma-separated)</label>
+          <input type="text" class="form-input" placeholder="romantic, coastal, luxury, sunset" formControlName="mood_tags">
+        </div>
+
+        <div class="form-group full-width">
+          <label>Description</label>
+          <textarea class="form-textarea" rows="5" placeholder="Describe why travellers should visit this destination…" formControlName="description"></textarea>
+        </div>
+
+        <!-- IMAGE UPLOAD -->
+        <div class="form-group full-width">
+          <label>Photo Upload</label>
+          <div class="image-upload-wrap">
+            @if (form.get('image_url')?.value) {
+              <img [src]="form.get('image_url')!.value" class="img-preview" alt="Preview">
+            }
+            <div class="upload-options">
+              <label class="upload-btn" [class.loading]="uploadingImage()">
+                {{ uploadingImage() ? '⏳ Uploading...' : '📷 Upload Photo' }}
+                <input type="file" accept="image/*" (change)="onImageUpload($event)" hidden>
+              </label>
+              <span class="or-text">or paste image URL:</span>
+              <input type="text" class="form-input" formControlName="image_url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" [disabled]="loading()">
+            {{ loading() ? 'Submitting...' : '✨ Submit Destination' }}
+          </button>
+          <a routerLink="/explore" class="btn-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<app-footer />

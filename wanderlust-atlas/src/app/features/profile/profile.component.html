@@ -1,0 +1,154 @@
+<div class="profile-page">
+  @if (loading()) {
+    <div style="padding-top: 100px">
+      <app-loader />
+    </div>
+  } @else {
+    <div class="container">
+      <!-- PROFILE HEADER -->
+      <div class="profile-header">
+        <div class="avatar-section">
+          <div class="avatar-wrapper">
+            @if (auth.currentProfile()?.avatar_url) {
+              <img [src]="auth.currentProfile()!.avatar_url!" class="profile-avatar" alt="Avatar">
+            } @else {
+              <div class="avatar-placeholder">
+                {{ (auth.currentProfile()?.username ?? 'U').charAt(0).toUpperCase() }}
+              </div>
+            }
+            <label class="avatar-upload-btn" [class.loading]="uploadingAvatar()">
+              @if (uploadingAvatar()) { ⏳ } @else { 📷 }
+              <input type="file" accept="image/*" (change)="onAvatarUpload($event)" hidden>
+            </label>
+          </div>
+
+          <div class="profile-info">
+            @if (!editMode()) {
+              <h1 class="profile-name">{{ auth.currentProfile()?.full_name || auth.currentProfile()?.username }}</h1>
+              <p class="profile-username">&#64;{{ auth.currentProfile()?.username }}</p>
+              @if (auth.currentProfile()?.bio) {
+                <p class="profile-bio">{{ auth.currentProfile()?.bio }}</p>
+              }
+              <button class="btn-ghost edit-btn" (click)="editMode.set(true)">✏ Edit Profile</button>
+            } @else {
+              <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="edit-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" class="form-input" formControlName="username">
+                  </div>
+                  <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" class="form-input" formControlName="full_name">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Bio</label>
+                  <textarea class="form-textarea" formControlName="bio" placeholder="Tell the world about your travel style…"></textarea>
+                </div>
+                <div class="edit-actions">
+                  <button type="submit" class="btn-primary">Save Changes</button>
+                  <button type="button" class="btn-ghost" (click)="editMode.set(false)">Cancel</button>
+                </div>
+              </form>
+            }
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="profile-stats">
+          <div class="stat-card glass-card">
+            <span class="stat-num">{{ stats().total }}</span>
+            <span class="stat-lbl">Dreams</span>
+          </div>
+          <div class="stat-card glass-card">
+            <span class="stat-num">{{ stats().countries }}</span>
+            <span class="stat-lbl">Countries</span>
+          </div>
+          <div class="stat-card glass-card">
+            <span class="stat-num">{{ stats().completed }}</span>
+            <span class="stat-lbl">Completed</span>
+          </div>
+          <div class="stat-card glass-card">
+            <span class="stat-num">{{ stats().dreaming }}</span>
+            <span class="stat-lbl">Dreaming</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUCKET LIST TABS -->
+      <div class="bucket-section">
+        <div class="bucket-tabs">
+          @for (tab of tabs; track tab.value) {
+            <button
+              class="bucket-tab"
+              [class.active]="activeTab() === tab.value"
+              (click)="activeTab.set(tab.value)"
+            >
+              {{ tab.icon }} {{ tab.label }}
+              @if (getTabCount(tab.value) > 0) {
+                <span class="tab-count">{{ getTabCount(tab.value) }}</span>
+              }
+            </button>
+          }
+        </div>
+
+        <!-- ITEMS -->
+        @if (filteredItems().length === 0) {
+          <div class="empty-list">
+            <span>🌍</span>
+            <h3>No destinations here yet</h3>
+            <p>Start building your bucket list by exploring destinations</p>
+            <a routerLink="/explore" class="btn-primary">Explore Destinations</a>
+          </div>
+        } @else {
+          <div class="bucket-items-grid">
+            @for (item of filteredItems(); track item.id) {
+              <div class="bucket-item-card glass-card">
+                @if (item.destination) {
+                  <div class="bucket-item-img-wrap">
+                    <img
+                      [src]="item.destination.image_url || 'assets/images/placeholder.jpg'"
+                      [alt]="item.destination.name"
+                      class="bucket-item-img"
+                    >
+                    <span class="bucket-item-badge" [class]="item.status">
+                      {{ statusConfig[item.status].icon }} {{ statusConfig[item.status].label }}
+                    </span>
+                  </div>
+                  <div class="bucket-item-info">
+                    <h3 class="bucket-item-name">
+                      <a [routerLink]="['/destination', item.destination.id]">{{ item.destination.name }}</a>
+                    </h3>
+                    <p class="bucket-item-country">
+                      {{ item.destination.country }} · {{ item.destination.category | categoryIcon }}
+                    </p>
+                    @if (item.target_year) {
+                      <p class="bucket-item-year">🎯 Target: {{ item.target_year }}</p>
+                    }
+                    @if (item.notes) {
+                      <p class="bucket-item-notes">{{ item.notes }}</p>
+                    }
+                    <div class="bucket-item-actions">
+                      <select class="form-select status-mini-select" [ngModel]="item.status"
+                        (ngModelChange)="updateStatus(item.id, $event)">
+                        @for (s of statusKeys; track s) {
+                        <option [value]="s">
+                          {{ statusConfig[s].icon }} {{ statusConfig[s].label }}
+                        </option>
+                        }
+                      </select>
+                      <button class="remove-btn" (click)="removeFromList(item.id)" title="Remove">✕</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<app-footer />

@@ -1,0 +1,10 @@
+{
+  "name": "wanderlust-atlas-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix wanderlust-atlas run start",
+    "start": "npm --prefix wanderlust-atlas run start",
+    "build": "npm --prefix wanderlust-atlas run build"
+  }
+}

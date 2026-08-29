@@ -1,0 +1,133 @@
+.public-profile-page { min-height: 100vh; }
+
+.profile-hero {
+  padding: 120px 0 60px;
+  background: linear-gradient(180deg, rgba(255,107,74,0.05) 0%, transparent 100%);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+
+.pub-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.pub-avatar-wrap { flex-shrink: 0; }
+
+.pub-avatar, .pub-avatar-placeholder {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  border: 3px solid var(--coral);
+}
+
+.pub-avatar { object-fit: cover; }
+
+.pub-avatar-placeholder {
+  background: linear-gradient(135deg, var(--coral), var(--amber));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.pub-info { flex: 1; }
+.pub-name { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+.pub-username { color: var(--coral); font-size: 0.9rem; margin-bottom: 12px; }
+.pub-bio { color: var(--white-60); font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px; max-width: 400px; }
+
+.follow-btn {
+  padding: 9px 24px;
+  border-radius: 100px;
+  border: 1px solid var(--coral);
+  background: transparent;
+  color: var(--coral);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Inter', sans-serif;
+
+  &.following {
+    background: rgba(255,107,74,0.15);
+    color: var(--coral);
+  }
+
+  &:hover { background: var(--coral); color: white; }
+}
+
+.pub-stats { display: flex; gap: 32px; flex-shrink: 0; }
+
+.pub-stat { text-align: center; }
+.pub-stat-num {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--coral);
+}
+.pub-stat-lbl { font-size: 0.78rem; color: var(--white-60); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.pub-body { padding-top: 60px; padding-bottom: 80px; }
+.pub-list-title { margin-bottom: 32px; }
+
+.pub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.pub-card {
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s;
+
+  &:hover { transform: translateY(-4px); }
+}
+
+.pub-card-img-wrap {
+  position: relative;
+  height: 160px;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.pub-status-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+
+  &.dreaming { background: rgba(167,139,250,0.2); color: #c4b5fd; }
+  &.planning { background: rgba(245,200,66,0.2); color: var(--amber); }
+  &.booked { background: rgba(96,165,250,0.2); color: #93c5fd; }
+  &.completed { background: rgba(34,197,94,0.2); color: #86efac; }
+}
+
+.pub-card-info {
+  padding: 14px;
+
+  h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  p { font-size: 0.8rem; color: var(--white-60); }
+}
+
+.not-found, .empty {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--white-60);
+
+  h2 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 20px; }
+}
+
+@media (max-width: 768px) {
+  .pub-profile-header { flex-direction: column; align-items: flex-start; }
+  .container { padding: 0 24px; }
+}

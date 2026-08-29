@@ -1,0 +1,180 @@
+<div class="explore-page">
+  <!-- PAGE HEADER -->
+  <div class="explore-header">
+    <div class="container">
+      <span class="section-tag">Browse the World</span>
+      <h1 class="explore-title">Explore <em>Destinations</em></h1>
+      <p class="explore-sub">{{ destinations().length }} destinations waiting to be discovered</p>
+    </div>
+  </div>
+
+  <div class="explore-body container">
+    <!-- MOBILE FILTER TOGGLE -->
+    <div class="mobile-filter-bar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="form-input search-input"
+          placeholder="Search destinations…"
+          [value]="searchQuery()"
+          (input)="onSearchChange($any($event.target).value)"
+        >
+      </div>
+      <button class="filter-toggle-btn" (click)="toggleSidebar()">
+        ⚙ Filters {{ hasActiveFilters ? '●' : '' }}
+      </button>
+    </div>
+
+    <div class="explore-layout">
+      <!-- SIDEBAR -->
+      <aside class="filter-sidebar" [class.open]="sidebarOpen()">
+        <div class="sidebar-header">
+          <h3>Filters</h3>
+          @if (hasActiveFilters) {
+            <button class="clear-btn" (click)="clearFilters()">Clear All</button>
+          }
+        </div>
+
+        <!-- Search (desktop) -->
+        <div class="filter-section desktop-search">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              class="form-input search-input"
+              placeholder="Search destinations…"
+              [value]="searchQuery()"
+              (input)="onSearchChange($any($event.target).value)"
+            >
+          </div>
+        </div>
+
+        <!-- Sort -->
+        <div class="filter-section">
+          <label class="filter-label">Sort By</label>
+          <select class="form-select" [(ngModel)]="sortBy" (ngModelChange)="onFilterChange()">
+            <option value="featured">Featured First</option>
+            <option value="newest">Newest</option>
+            <option value="alphabetical">A → Z</option>
+            <option value="cost_asc">Budget: Low to High</option>
+            <option value="cost_desc">Budget: High to Low</option>
+          </select>
+        </div>
+
+        <!-- Categories -->
+        <div class="filter-section">
+          <label class="filter-label">Category</label>
+          <div class="category-chips">
+            <button
+              class="chip"
+              [class.active]="selectedCategory() === ''"
+              (click)="selectedCategory.set(''); onFilterChange()"
+            >All</button>
+            @for (cat of categories; track cat.value) {
+              <button
+                class="chip"
+                [class.active]="selectedCategory() === cat.value"
+                (click)="selectedCategory.set(cat.value); onFilterChange()"
+              >
+                {{ cat.icon }} {{ cat.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Continent -->
+        <div class="filter-section">
+          <label class="filter-label">Continent</label>
+          <select class="form-select" [(ngModel)]="selectedContinent" (ngModelChange)="onFilterChange()">
+            <option value="">All Continents</option>
+            @for (c of continents; track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Difficulty -->
+        <div class="filter-section">
+          <label class="filter-label">Difficulty</label>
+          <div class="difficulty-options">
+            <button
+              class="diff-btn"
+              [class.active]="selectedDifficulty() === ''"
+              (click)="selectedDifficulty.set(''); onFilterChange()"
+            >Any</button>
+            @for (d of difficulties; track d) {
+              <button
+                class="diff-btn"
+                [class]="'diff-btn ' + d"
+                [class.active]="selectedDifficulty() === d"
+                (click)="selectedDifficulty.set(d); onFilterChange()"
+              >
+                {{ d | titlecase }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Season -->
+        <div class="filter-section">
+          <label class="filter-label">Best Season</label>
+          <select class="form-select" [(ngModel)]="selectedSeason" (ngModelChange)="onFilterChange()">
+            <option value="">Any Season</option>
+            @for (s of seasons; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="explore-main">
+        <!-- TOOLBAR -->
+        <div class="explore-toolbar">
+          <span class="results-count">
+            @if (loading()) { Searching... } @else {
+              {{ destinations().length }} destinations found
+            }
+          </span>
+          <div class="view-toggle">
+            <button
+              class="view-btn"
+              [class.active]="viewMode() === 'grid'"
+              (click)="toggleView('grid')"
+            >⊞ Grid</button>
+            <button
+              class="view-btn"
+              [class.active]="viewMode() === 'list'"
+              (click)="toggleView('list')"
+            >☰ List</button>
+          </div>
+        </div>
+
+        <!-- GRID / LIST -->
+        @if (loading()) {
+          <div class="destinations-grid">
+            @for (s of skeletons; track $index) {
+              <app-destination-card [loading]="true" />
+            }
+          </div>
+        } @else if (destinations().length === 0) {
+          <div class="no-results">
+            <span>🌍</span>
+            <h3>No destinations found</h3>
+            <p>Try adjusting your filters or search query</p>
+            <button class="btn-ghost" (click)="clearFilters()">Clear Filters</button>
+          </div>
+        } @else {
+          <div [class]="viewMode() === 'grid' ? 'destinations-grid' : 'destinations-list'">
+            @for (dest of destinations(); track dest.id) {
+              <app-destination-card [destination]="dest" />
+            }
+          </div>
+        }
+      </main>
+    </div>
+  </div>
+</div>
+
+<app-footer />

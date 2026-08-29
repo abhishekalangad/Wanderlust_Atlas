@@ -1,0 +1,212 @@
+@if (loading()) {
+  <div style="padding-top: 80px">
+    <app-loader />
+  </div>
+} @else if (!destination()) {
+  <div class="not-found">
+    <h2>Destination not found</h2>
+    <a routerLink="/explore" class="btn-primary">Browse Destinations</a>
+  </div>
+} @else {
+  <!-- HERO -->
+  <div class="detail-hero">
+    <img
+      [src]="destination()!.image_url || 'assets/images/placeholder.jpg'"
+      [alt]="destination()!.name"
+      class="detail-hero-img"
+    >
+    <div class="detail-hero-overlay"></div>
+    <div class="detail-hero-content container">
+      <div class="detail-breadcrumb">
+        <a routerLink="/">Home</a>
+        <span>→</span>
+        <a routerLink="/explore">Explore</a>
+        <span>→</span>
+        <span>{{ destination()!.name }}</span>
+      </div>
+      <div class="detail-category-badge">
+        {{ destination()!.category | categoryIcon }}
+        {{ getCategoryLabel(destination()!.category) }}
+      </div>
+      <h1 class="detail-title">{{ destination()!.name }}</h1>
+      <p class="detail-subtitle">{{ destination()!.country }}, {{ destination()!.continent }}</p>
+
+      <!-- MOOD TAGS -->
+      <div class="detail-mood-tags">
+        @for (tag of destination()!.mood_tags; track tag) {
+          <span class="mood-tag">{{ tag }}</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="detail-body container">
+    <div class="detail-layout">
+      <!-- LEFT: Info -->
+      <div class="detail-main">
+        <section class="detail-section">
+          <h2 class="detail-section-title">About This Destination</h2>
+          <p class="detail-description">{{ destination()!.description }}</p>
+        </section>
+
+        <section class="detail-section">
+          <h2 class="detail-section-title">Quick Facts</h2>
+          <div class="facts-grid">
+            @if (destination()!.recommended_duration_days) {
+              <div class="fact-item">
+                <span class="fact-icon">⏱️</span>
+                <div>
+                  <span class="fact-label">Recommended Stay</span>
+                  <span class="fact-value">{{ destination()!.recommended_duration_days }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.nearest_airport) {
+              <div class="fact-item">
+                <span class="fact-icon">✈️</span>
+                <div>
+                  <span class="fact-label">Nearest Airport</span>
+                  <span class="fact-value">{{ destination()!.nearest_airport }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.local_currency_language) {
+              <div class="fact-item">
+                <span class="fact-icon">💱</span>
+                <div>
+                  <span class="fact-label">Currency & Language</span>
+                  <span class="fact-value">{{ destination()!.local_currency_language }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.visa_info) {
+              <div class="fact-item">
+                <span class="fact-icon">🛂</span>
+                <div>
+                  <span class="fact-label">Visa Info</span>
+                  <span class="fact-value">{{ destination()!.visa_info }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.must_try_activities) {
+              <div class="fact-item full-width-fact">
+                <span class="fact-icon">🌟</span>
+                <div>
+                  <span class="fact-label">Must-Try Activities & Food</span>
+                  <span class="fact-value">{{ destination()!.must_try_activities }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.difficulty) {
+              <div class="fact-item">
+                <span class="fact-icon">⚡</span>
+                <div>
+                  <span class="fact-label">Difficulty</span>
+                  <span class="fact-value" [class]="'diff-badge ' + destination()!.difficulty">
+                    {{ destination()!.difficulty | titlecase }}
+                  </span>
+                </div>
+              </div>
+            }
+            @if (destination()!.best_season) {
+              <div class="fact-item">
+                <span class="fact-icon">🌤</span>
+                <div>
+                  <span class="fact-label">Best Season</span>
+                  <span class="fact-value">{{ destination()!.best_season }}</span>
+                </div>
+              </div>
+            }
+            @if (destination()!.avg_cost_usd) {
+              <div class="fact-item">
+                <span class="fact-icon">💰</span>
+                <div>
+                  <span class="fact-label">Avg. Budget</span>
+                  <span class="fact-value">{{ formatCost(destination()!.avg_cost_usd) }} / person</span>
+                </div>
+              </div>
+            }
+            <div class="fact-item">
+              <span class="fact-icon">🌍</span>
+              <div>
+                <span class="fact-label">Continent</span>
+                <span class="fact-value">{{ destination()!.continent }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: Add to List -->
+      <aside class="detail-sidebar">
+        <div class="bucket-action-card glass-card">
+          <h3 class="bucket-action-title">
+            @if (isInList()) { 📋 In Your Bucket List } @else { ✨ Add to Bucket List }
+          </h3>
+
+          @if (isInList()) {
+            <!-- Already in list -->
+            <div class="current-status">
+              <span>Current Status:</span>
+              <select class="form-select status-select" [ngModel]="currentItem()?.status" (ngModelChange)="updateStatus($event)">
+                @for (s of statuses; track s) {
+                  <option [value]="s">
+                    {{ statusConfig[s].icon }} {{ statusConfig[s].label }}
+                  </option>
+                }
+              </select>
+            </div>
+            <button class="btn-ghost full-remove-btn" (click)="removeFromList()">
+              Remove from List
+            </button>
+          } @else {
+            <!-- Not in list -->
+            <p class="bucket-action-sub">Choose your status for this destination:</p>
+            <div class="status-options">
+              @for (s of statuses; track s) {
+                <button
+                  class="status-option-btn"
+                  [class.selected]="selectedStatus() === s"
+                  (click)="selectedStatus.set(s)"
+                >
+                  {{ statusConfig[s].icon }} {{ statusConfig[s].label }}
+                </button>
+              }
+            </div>
+            @if (auth.isLoggedIn()) {
+              <button class="btn-primary add-btn" (click)="addToList()">
+                Add to My List
+              </button>
+            } @else {
+              <a routerLink="/auth" class="btn-primary add-btn" style="text-align: center">
+                Sign In to Add
+              </a>
+            }
+          }
+        </div>
+
+        @if (destination()!.is_featured) {
+          <div class="featured-card glass-card">
+            <span class="featured-icon">✦</span>
+            <p>This is a <strong>featured destination</strong> — handpicked by our travel curators for its extraordinary experience.</p>
+          </div>
+        }
+      </aside>
+    </div>
+
+    <!-- RELATED DESTINATIONS -->
+    @if (relatedDestinations().length > 0) {
+      <section class="related-section">
+        <h2 class="detail-section-title">More {{ getCategoryLabel(destination()!.category) }} Destinations</h2>
+        <div class="related-grid">
+          @for (dest of relatedDestinations(); track dest.id) {
+            <app-destination-card [destination]="dest" />
+          }
+        </div>
+      </section>
+    }
+  </div>
+}
+
+<app-footer />

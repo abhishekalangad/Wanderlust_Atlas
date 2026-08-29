@@ -1,0 +1,310 @@
+<div class="admin-page">
+  <div class="admin-header">
+    <div class="container">
+      <h1 class="admin-title">Admin <em>Dashboard</em></h1>
+      <p class="admin-sub">Manage destinations, users, and platform settings</p>
+    </div>
+  </div>
+
+  <div class="container admin-body">
+    @if (loading()) {
+      <app-loader />
+    } @else {
+      <!-- TABS -->
+      <div class="admin-tabs">
+        <button class="admin-tab" [class.active]="activeTab() === 'dashboard'" (click)="activeTab.set('dashboard')">📊 Overview</button>
+        <button class="admin-tab" [class.active]="activeTab() === 'pending'" (click)="activeTab.set('pending')">
+          ⏳ Pending Approvals
+          @if (stats().pending > 0) {
+            <span class="badge-count">{{ stats().pending }}</span>
+          }
+        </button>
+        <button class="admin-tab" [class.active]="activeTab() === 'destinations'" (click)="activeTab.set('destinations')">🌍 Destinations</button>
+        <button class="admin-tab" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">👥 Users</button>
+      </div>
+
+      <!-- DASHBOARD OVERVIEW -->
+      @if (activeTab() === 'dashboard') {
+        <div class="stats-grid">
+          <div class="admin-stat-card glass-card">
+            <span class="admin-stat-icon">👥</span>
+            <div>
+              <span class="admin-stat-num">{{ stats().users }}</span>
+              <span class="admin-stat-lbl">Total Users</span>
+            </div>
+          </div>
+          <div class="admin-stat-card glass-card">
+            <span class="admin-stat-icon">🌍</span>
+            <div>
+              <span class="admin-stat-num">{{ stats().destinations }}</span>
+              <span class="admin-stat-lbl">Approved Places</span>
+            </div>
+          </div>
+          <div class="admin-stat-card glass-card">
+            <span class="admin-stat-icon">⏳</span>
+            <div>
+              <span class="admin-stat-num">{{ stats().pending }}</span>
+              <span class="admin-stat-lbl">Pending Submissions</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- PENDING APPROVALS TAB -->
+      @if (activeTab() === 'pending') {
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <h2 class="tab-title">Pending Destination Submissions ({{ pendingDestinations().length }})</h2>
+          </div>
+
+          @if (pendingDestinations().length === 0) {
+            <div class="empty-list">
+              <span>✅</span>
+              <h3>No pending submissions</h3>
+              <p>All user destination suggestions have been reviewed.</p>
+            </div>
+          } @else {
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Country</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (dest of pendingDestinations(); track dest.id) {
+                    <tr>
+                      <td>
+                        <img [src]="dest.image_url || 'assets/images/placeholder.jpg'" class="table-thumb" [alt]="dest.name">
+                      </td>
+                      <td class="table-name">{{ dest.name }}</td>
+                      <td class="table-muted">{{ dest.country }}</td>
+                      <td>{{ dest.category | categoryIcon }} {{ dest.category }}</td>
+                      <td class="table-muted table-desc">{{ dest.description?.slice(0, 80) }}...</td>
+                      <td>
+                        <div class="table-actions">
+                          <button class="action-btn approve" (click)="approveDestination(dest.id, dest.name)">✓ Approve</button>
+                          <button class="action-btn delete" (click)="rejectDestination(dest.id, dest.name)">✕ Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- DESTINATIONS TAB -->
+      @if (activeTab() === 'destinations') {
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <h2 class="tab-title">Destinations ({{ destinations().length }})</h2>
+            @if (!showAddForm()) {
+              <button class="btn-primary" (click)="showAddForm.set(true)">+ Add Destination</button>
+            }
+          </div>
+
+          <!-- ADD/EDIT FORM -->
+          @if (showAddForm()) {
+            <div class="admin-form glass-card">
+              <h3 class="form-title">{{ editingDestination() ? 'Edit' : 'Add New' }} Destination</h3>
+              <form [formGroup]="destForm" (ngSubmit)="submitDestination()">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" class="form-input" formControlName="name">
+                  </div>
+                  <div class="form-group">
+                    <label>Country *</label>
+                    <input type="text" class="form-input" formControlName="country">
+                  </div>
+                  <div class="form-group">
+                    <label>Continent *</label>
+                    <select class="form-select" formControlName="continent">
+                      <option value="">Select…</option>
+                      @for (c of continents; track c) { <option [value]="c">{{ c }}</option> }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Category *</label>
+                    <select class="form-select" formControlName="category">
+                      <option value="">Select…</option>
+                      @for (c of categories; track c.value) {
+                        <option [value]="c.value">{{ c.icon }} {{ c.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Difficulty</label>
+                    <select class="form-select" formControlName="difficulty">
+                      @for (d of difficulties; track d) { <option [value]="d">{{ d | titlecase }}</option> }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Best Season</label>
+                    <input type="text" class="form-input" formControlName="best_season" placeholder="e.g. May–October">
+                  </div>
+                  <div class="form-group">
+                    <label>Avg. Cost USD</label>
+                    <input type="number" class="form-input" formControlName="avg_cost_usd" placeholder="e.g. 2500">
+                  </div>
+                  <div class="form-group">
+                    <label>Recommended Stay Duration</label>
+                    <input type="text" class="form-input" formControlName="recommended_duration_days" placeholder="e.g. 3–5 Days">
+                  </div>
+                  <div class="form-group">
+                    <label>Nearest Airport / Hub</label>
+                    <input type="text" class="form-input" formControlName="nearest_airport" placeholder="e.g. Tokyo Narita (NRT)">
+                  </div>
+                  <div class="form-group">
+                    <label>Currency & Language</label>
+                    <input type="text" class="form-input" formControlName="local_currency_language" placeholder="e.g. JPY (¥) / Japanese">
+                  </div>
+                  <div class="form-group">
+                    <label>Visa Info</label>
+                    <input type="text" class="form-input" formControlName="visa_info" placeholder="e.g. Visa on arrival for 90 days">
+                  </div>
+                  <div class="form-group full-width">
+                    <label>Must-Try Food & Activities</label>
+                    <input type="text" class="form-input" formControlName="must_try_activities" placeholder="e.g. Onsen, Ramen, Tea Ceremony">
+                  </div>
+                  <div class="form-group">
+                    <label>Mood Tags (comma-separated)</label>
+                    <input type="text" class="form-input" formControlName="mood_tags" placeholder="romantic, iconic, sunset">
+                  </div>
+                </div>
+                <div class="form-group full-width">
+                  <label>Description</label>
+                  <textarea class="form-textarea" formControlName="description" rows="4"></textarea>
+                </div>
+                <div class="form-group full-width">
+                  <label>Image</label>
+                  <div class="image-upload-area">
+                    @if (destForm.get('image_url')?.value) {
+                      <img [src]="destForm.get('image_url')!.value" class="image-preview" alt="Preview">
+                    }
+                    <label class="upload-label" [class.loading]="uploadingImage()">
+                      {{ uploadingImage() ? '⏳ Uploading…' : '📷 Upload Image' }}
+                      <input type="file" accept="image/*" (change)="onImageUpload($event)" hidden>
+                    </label>
+                    <span class="or-text">or paste URL:</span>
+                    <input type="text" class="form-input" formControlName="image_url" placeholder="https://...">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="is_featured">
+                    <span>Featured destination</span>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary">
+                    {{ editingDestination() ? 'Save Changes' : 'Create Destination' }}
+                  </button>
+                  <button type="button" class="btn-ghost" (click)="cancelForm()">Cancel</button>
+                </div>
+              </form>
+            </div>
+          }
+
+          <!-- DESTINATIONS TABLE -->
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Country</th>
+                  <th>Category</th>
+                  <th>Featured</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (dest of destinations(); track dest.id) {
+                  <tr>
+                    <td>
+                      <img [src]="dest.image_url || 'assets/images/placeholder.jpg'" class="table-thumb" [alt]="dest.name">
+                    </td>
+                    <td class="table-name">{{ dest.name }}</td>
+                    <td class="table-muted">{{ dest.country }}</td>
+                    <td>{{ dest.category | categoryIcon }} {{ dest.category }}</td>
+                    <td>
+                      <button
+                        class="featured-toggle"
+                        [class.on]="dest.is_featured"
+                        (click)="toggleFeatured(dest)"
+                      >{{ dest.is_featured ? '✦ Featured' : '○ Normal' }}</button>
+                    </td>
+                    <td>
+                      <div class="table-actions">
+                        <button class="action-btn edit" (click)="startEdit(dest)">✏ Edit</button>
+                        <button class="action-btn delete" (click)="deleteDestination(dest.id, dest.name)">✕ Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- USERS TAB -->
+      @if (activeTab() === 'users') {
+        <div class="tab-content">
+          <div class="tab-toolbar">
+            <h2 class="tab-title">Users ({{ users().length }})</h2>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Avatar</th>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Joined</th>
+                  <th>Admin</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of users(); track user.id) {
+                  <tr>
+                    <td>
+                      @if (user.avatar_url) {
+                        <img [src]="user.avatar_url" class="table-thumb round" [alt]="user.username">
+                      } @else {
+                        <div class="table-avatar-placeholder">{{ (user.username ?? 'U').charAt(0).toUpperCase() }}</div>
+                      }
+                    </td>
+                    <td><a [routerLink]="['/profile', user.username]" class="username-link">&#64;{{ user.username }}</a></td>
+                    <td class="table-muted">{{ user.full_name || '—' }}</td>
+                    <td class="table-muted">{{ user.created_at | date:'mediumDate' }}</td>
+                    <td>
+                      <span class="admin-badge" [class.is-admin]="user.is_admin">
+                        {{ user.is_admin ? '✓ Admin' : 'User' }}
+                      </span>
+                    </td>
+                    <td>
+                      <button class="action-btn" (click)="toggleAdmin(user.id, user.is_admin)">
+                        {{ user.is_admin ? 'Remove Admin' : 'Make Admin' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

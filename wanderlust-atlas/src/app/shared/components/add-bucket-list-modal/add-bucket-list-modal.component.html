@@ -1,0 +1,79 @@
+<div class="modal-backdrop" (click)="close()">
+  <div class="modal-card glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <span class="modal-tag">{{ existingItem ? 'Edit Details' : 'Add to Bucket List' }}</span>
+        <h2 class="modal-title">{{ destination?.name }}</h2>
+        <p class="modal-sub">{{ destination?.country }} · {{ destination?.continent }}</p>
+      </div>
+      <button class="close-btn" (click)="close()">✕</button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-body">
+      <!-- Status Picker -->
+      <div class="form-group">
+        <label>Stage / Status *</label>
+        <div class="status-grid">
+          @for (s of statuses; track s) {
+            <button
+              type="button"
+              class="status-btn"
+              [class.active]="form.get('status')?.value === s"
+              (click)="form.patchValue({ status: s })"
+            >
+              <span class="icon">{{ statusConfig[s].icon }}</span>
+              <span class="label">{{ statusConfig[s].label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Year & Month -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Target Year</label>
+          <input type="number" class="form-input" placeholder="e.g. 2026" formControlName="target_year">
+        </div>
+        <div class="form-group">
+          <label>Target Month</label>
+          <select class="form-select" formControlName="target_month">
+            <option value="">Any Month</option>
+            @for (m of months; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <!-- Budget & Priority -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estimated Budget (USD)</label>
+          <input type="number" class="form-input" placeholder="e.g. 2500" formControlName="estimated_budget_usd">
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select class="form-select" formControlName="priority">
+            @for (p of priorities; track p) { <option [value]="p">{{ p | titlecase }} Priority</option> }
+          </select>
+        </div>
+      </div>
+
+      <!-- Personal Notes & Tips -->
+      <div class="form-group">
+        <label>Personal Travel Notes</label>
+        <textarea class="form-textarea" rows="3" placeholder="Why do you want to visit? Who are you going with?" formControlName="notes"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Custom Travel Tips & Reminders</label>
+        <input type="text" class="form-input" placeholder="e.g. Book JR pass 2 months early, stay near Gion" formControlName="travel_tips">
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn-primary" [disabled]="loading()">
+          {{ loading() ? 'Saving...' : (existingItem ? 'Save Changes' : '✨ Add to My Bucket List') }}
+        </button>
+        <button type="button" class="btn-ghost" (click)="close()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
