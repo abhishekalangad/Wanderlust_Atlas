@@ -39,6 +39,7 @@ export class TravelogueCreateComponent implements OnInit {
   form: FormGroup = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(5)]],
     destination_id: [''],
+    custom_destination_name: [''],
     excerpt: [''],
     content: ['', [Validators.required, Validators.minLength(50)]],
     cover_image_url: [''],
@@ -72,6 +73,7 @@ export class TravelogueCreateComponent implements OnInit {
         this.form.patchValue({
           title: existing.title,
           destination_id: existing.destination_id || '',
+          custom_destination_name: existing.destination ? existing.destination.name : '',
           excerpt: existing.excerpt || '',
           content: existing.content,
           cover_image_url: existing.cover_image_url || '',
@@ -142,10 +144,24 @@ export class TravelogueCreateComponent implements OnInit {
 
     this.loading.set(true);
 
+    let finalDestinationId = this.form.value.destination_id || null;
+    const customName = this.form.value.custom_destination_name?.trim();
+
+    if (!finalDestinationId && customName) {
+      const destObj = await this.destService.getOrCreateDestinationByName(customName, user.id);
+      if (destObj) {
+        finalDestinationId = destObj.id;
+      }
+    }
+
     const payload = {
-      ...this.form.value,
+      title: this.form.value.title,
+      excerpt: this.form.value.excerpt,
+      content: this.form.value.content,
+      cover_image_url: this.form.value.cover_image_url,
+      pdf_url: this.form.value.pdf_url,
       user_id: user.id,
-      destination_id: this.form.value.destination_id || null,
+      destination_id: finalDestinationId,
     };
 
     if (this.isEditMode() && this.editId()) {

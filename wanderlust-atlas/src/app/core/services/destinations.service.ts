@@ -237,4 +237,37 @@ export class DestinationsService {
       bucketItems: itemsRes.count ?? 0,
     };
   }
+
+  async getOrCreateDestinationByName(name: string, userId: string): Promise<Destination | null> {
+    const cleanName = name.trim();
+    if (!cleanName) return null;
+
+    const { data: existing } = await this.supabase.client
+      .from('destinations')
+      .select('*')
+      .ilike('name', cleanName)
+      .maybeSingle();
+
+    if (existing) return existing as Destination;
+
+    const { data: created, error } = await this.supabase.client
+      .from('destinations')
+      .insert({
+        name: cleanName,
+        country: 'India',
+        continent: 'Asia',
+        category: 'culture',
+        description: `Travel destination featured in community travelogue: ${cleanName}`,
+        approval_status: 'approved',
+        submitted_by: userId
+      })
+      .select('*')
+      .single();
+
+    if (!error && created) {
+      this._destinations.update(d => [created as Destination, ...d]);
+      return created as Destination;
+    }
+    return null;
+  }
 }

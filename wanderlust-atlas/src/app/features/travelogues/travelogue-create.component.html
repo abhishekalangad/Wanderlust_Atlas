@@ -20,9 +20,9 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Related Destination (Optional)</label>
+              <label>Select Destination (Optional)</label>
               <select class="form-select" formControlName="destination_id">
-                <option value="">Select a destination…</option>
+                <option value="">Select an existing destination…</option>
                 @for (d of destinations(); track d.id) {
                   <option [value]="d.id">{{ d.name }} ({{ d.country }})</option>
                 }
@@ -30,9 +30,14 @@
             </div>
 
             <div class="form-group">
-              <label>Short Excerpt</label>
-              <input type="text" class="form-input" placeholder="A brief summary of your travel story…" formControlName="excerpt">
+              <label>Or Enter Custom Destination Name</label>
+              <input type="text" class="form-input" placeholder="e.g. Manali, Shoranur, Palakkad" formControlName="custom_destination_name">
             </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Short Excerpt</label>
+            <input type="text" class="form-input" placeholder="A brief summary of your travel story…" formControlName="excerpt">
           </div>
 
           <div class="form-group full-width">
