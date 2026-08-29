@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TravelogueService } from '../../core/services/travelogue.service';
+import { AuthService } from '../../core/services/auth.service';
 import { FooterComponent } from '../../shared/components/footer/footer.component';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
 import { Travelogue } from '../../core/models/types';
@@ -36,6 +37,12 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
                   📍 {{ travelogue()!.destination!.name }}
                 </a>
               }
+              @if (canEdit()) {
+                <span>•</span>
+                <a [routerLink]="['/travelogues', travelogue()!.id, 'edit']" class="edit-link">
+                  ✏️ Edit Travelogue
+                </a>
+              }
             </div>
             <h1 class="story-title">{{ travelogue()!.title }}</h1>
             <div class="story-author-bar">
@@ -46,6 +53,11 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
                 <span class="author-name">By {{ travelogue()!.profile?.full_name || travelogue()!.profile?.username }}</span>
                 <span class="story-date">{{ travelogue()!.created_at | date:'longDate' }}</span>
               </div>
+              @if (canEdit()) {
+                <a [routerLink]="['/travelogues', travelogue()!.id, 'edit']" class="btn-ghost edit-btn">
+                  ✏️ Edit Story
+                </a>
+              }
             </div>
           </div>
         </div>
@@ -88,28 +100,40 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 export class TravelogueDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private travelogueService = inject(TravelogueService);
+  private auth = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
 
   travelogue = signal<Travelogue | null>(null);
   loading = signal(true);
   safePdfUrl = signal<SafeResourceUrl | null>(null);
 
+  canEdit = computed(() => {
+    const user = this.auth.currentUser();
+    const isAdmin = this.auth.isAdmin();
+    const t = this.travelogue();
+    if (!user || !t) return false;
+    return user.id === t.user_id || isAdmin;
+  });
+
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
-    const item = await this.travelogueService.getTravelogueById(id);
-    this.travelogue.set(item);
-
-    if (item?.pdf_url) {
-      this.safePdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(item.pdf_url));
-    }
-
+    const data = await this.travelogueService.getTravelogueById(id);
     this.loading.set(false);
+
+    if (data) {
+      this.travelogue.set(data);
+      if (data.pdf_url) {
+        this.safePdfUrl.set(
+          this.sanitizer.bypassSecurityTrustResourceUrl(data.pdf_url)
+        );
+      }
+    }
   }
 
   formattedContent(): string {
-    const content = this.travelogue()?.content ?? '';
-    return content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+    const content = this.travelogue()?.content || '';
+    return content.replace(/\n/g, '<br>');
   }
 }

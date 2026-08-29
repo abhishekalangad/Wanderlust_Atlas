@@ -58,6 +58,20 @@ export class TravelogueService {
     return { data: data as Travelogue | null, error };
   }
 
+  async updateTravelogue(id: string, updates: Partial<Travelogue>): Promise<{ data: Travelogue | null; error: any }> {
+    const { data, error } = await this.supabase.client
+      .from('travelogues')
+      .update(updates)
+      .eq('id', id)
+      .select('*, profile:profiles(*), destination:destinations(*)')
+      .single();
+
+    if (!error && data) {
+      this._travelogues.update(t => t.map(item => item.id === id ? (data as Travelogue) : item));
+    }
+    return { data: data as Travelogue | null, error };
+  }
+
   async deleteTravelogue(id: string): Promise<{ error: any }> {
     const { error } = await this.supabase.client
       .from('travelogues')

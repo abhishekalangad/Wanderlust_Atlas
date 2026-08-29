@@ -26,4 +26,11 @@ export class TraveloguesComponent implements OnInit {
     this.travelogues.set(list);
     this.loading.set(false);
   }
+
+  canEdit(item: Travelogue): boolean {
+    const user = this.auth.currentUser();
+    const isAdmin = this.auth.isAdmin();
+    if (!user) return false;
+    return user.id === item.user_id || isAdmin;
+  }
 }

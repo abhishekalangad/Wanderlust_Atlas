@@ -59,7 +59,12 @@
                   <span>by {{ item.profile?.full_name || item.profile?.username || 'Traveller' }}</span>
                 </div>
 
-                <a [routerLink]="['/travelogues', item.id]" class="read-btn">Read Story →</a>
+                <div class="card-actions">
+                  @if (canEdit(item)) {
+                    <a [routerLink]="['/travelogues', item.id, 'edit']" class="btn-ghost edit-btn-sm">✏️ Edit</a>
+                  }
+                  <a [routerLink]="['/travelogues', item.id]" class="read-btn">Read Story →</a>
+                </div>
               </div>
             </div>
           </article>

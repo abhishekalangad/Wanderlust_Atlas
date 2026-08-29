@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TravelogueService } from '../../core/services/travelogue.service';
 import { DestinationsService } from '../../core/services/destinations.service';
@@ -13,7 +13,7 @@ import { Destination } from '../../core/models/types';
 @Component({
   selector: 'app-travelogue-create',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, FooterComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, FooterComponent, LoaderComponent],
   templateUrl: './travelogue-create.component.html',
   styleUrls: ['./travelogue-create.component.scss'],
 })
@@ -24,12 +24,16 @@ export class TravelogueCreateComponent implements OnInit {
   private auth = inject(AuthService);
   private toast = inject(ToastService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   destinations = signal<Destination[]>([]);
   loading = signal(false);
+  initialLoading = signal(false);
+  isEditMode = signal(false);
+  editId = signal<string | null>(null);
+
   uploadingPdf = signal(false);
   uploadingImage = signal(false);
-
   pdfFileName = signal<string | null>(null);
 
   form: FormGroup = this.fb.group({
@@ -44,6 +48,44 @@ export class TravelogueCreateComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const list = await this.destService.getDestinations();
     this.destinations.set(list);
+
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.isEditMode.set(true);
+      this.editId.set(id);
+      this.initialLoading.set(true);
+
+      const existing = await this.travelogueService.getTravelogueById(id);
+      this.initialLoading.set(false);
+
+      if (existing) {
+        const user = this.auth.currentUser();
+        const isOwner = user && existing.user_id === user.id;
+        const isAdmin = this.auth.isAdmin();
+
+        if (!isOwner && !isAdmin) {
+          this.toast.error('You do not have permission to edit this travelogue.');
+          this.router.navigate(['/travelogues', id]);
+          return;
+        }
+
+        this.form.patchValue({
+          title: existing.title,
+          destination_id: existing.destination_id || '',
+          excerpt: existing.excerpt || '',
+          content: existing.content,
+          cover_image_url: existing.cover_image_url || '',
+          pdf_url: existing.pdf_url || '',
+        });
+
+        if (existing.pdf_url) {
+          this.pdfFileName.set('Attached PDF Document');
+        }
+      } else {
+        this.toast.error('Travelogue not found.');
+        this.router.navigate(['/travelogues']);
+      }
+    }
   }
 
   async onPdfUpload(event: Event): Promise<void> {
@@ -106,14 +148,26 @@ export class TravelogueCreateComponent implements OnInit {
       destination_id: this.form.value.destination_id || null,
     };
 
-    const { data, error } = await this.travelogueService.createTravelogue(payload);
-    this.loading.set(false);
+    if (this.isEditMode() && this.editId()) {
+      const { data, error } = await this.travelogueService.updateTravelogue(this.editId()!, payload);
+      this.loading.set(false);
 
-    if (!error && data) {
-      this.toast.success('🎉 Your travelogue has been published!');
-      this.router.navigate(['/travelogues', data.id]);
+      if (!error && data) {
+        this.toast.success('✏️ Your travelogue has been updated!');
+        this.router.navigate(['/travelogues', data.id]);
+      } else {
+        this.toast.error('Update failed. Please check your form and try again.');
+      }
     } else {
-      this.toast.error('Publish failed. Please check your form and try again.');
+      const { data, error } = await this.travelogueService.createTravelogue(payload);
+      this.loading.set(false);
+
+      if (!error && data) {
+        this.toast.success('🎉 Your travelogue has been published!');
+        this.router.navigate(['/travelogues', data.id]);
+      } else {
+        this.toast.error('Publish failed. Please check your form and try again.');
+      }
     }
   }
 }

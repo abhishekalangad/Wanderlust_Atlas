@@ -53,6 +53,15 @@ export const routes: Routes = [
     title: 'Travelogue — Wanderlust Atlas',
   },
   {
+    path: 'travelogues/:id/edit',
+    loadComponent: () =>
+      import('./features/travelogues/travelogue-create.component').then(
+        m => m.TravelogueCreateComponent
+      ),
+    title: 'Edit Travelogue — Wanderlust Atlas',
+    canActivate: [authGuard],
+  },
+  {
     path: 'suggest-destination',
     loadComponent: () =>
       import('./features/suggest-destination/suggest-destination.component').then(
