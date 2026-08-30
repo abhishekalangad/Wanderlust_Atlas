@@ -4,17 +4,22 @@
     <div class="container">
       <div class="hero-content">
         <span class="hero-badge">✈️ INTERACTIVE TRIP PLANNER</span>
-        <h1 class="hero-title">Plan Your Next <em>Unforgettable Journey</em></h1>
-        <p class="hero-sub">Organize transportation passes, multi-place itineraries, hotel stays, and spot checklists effortlessly.</p>
-        
+        <h1 class="hero-title">
+          Plan Your Next <em>Unforgettable Journey</em>
+        </h1>
+        <p class="hero-sub">
+          Organize transport passes, destination stops, hotel stays &amp; spot
+          checklists — all in one place.
+        </p>
         <div class="hero-actions">
-          <button class="btn-primary" (click)="openCreateModal()">+ Create New Journey</button>
+          <button class="btn-primary" (click)="openCreateModal()">
+            + Create New Journey
+          </button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- MAIN BODY -->
   <main class="planner-body">
     <div class="container">
       @if (tripService.loading()) {
@@ -23,8 +28,13 @@
         <div class="empty-planner glass-card">
           <span class="empty-icon">🗺️</span>
           <h3>No Trips Planned Yet</h3>
-          <p>Start planning your dream trip! Add your flexible dates, transport modes, places to visit, and hotel stays.</p>
-          <button class="btn-primary" (click)="openCreateModal()">+ Plan Your First Trip</button>
+          <p>
+            Start planning your dream trip! Add flexible dates, transport
+            passes, places to visit &amp; hotel stays.
+          </p>
+          <button class="btn-primary" (click)="openCreateModal()">
+            + Plan Your First Trip
+          </button>
         </div>
       } @else {
         <!-- TRIPS SELECTOR BAR -->
@@ -39,7 +49,9 @@
               >
                 📍 {{ t.title }}
                 @if (t.start_date) {
-                  <span class="tab-date">({{ t.start_date | date:'MMM d' }})</span>
+                  <span class="tab-date"
+                    >({{ t.start_date | date: "MMM d" }})</span
+                  >
                 }
               </button>
             }
@@ -56,9 +68,9 @@
                   <h2 class="trip-title">{{ activeTrip()!.title }}</h2>
                   @if (activeTrip()!.start_date || activeTrip()!.end_date) {
                     <p class="trip-dates">
-                      📅 {{ activeTrip()!.start_date | date:'mediumDate' }}
+                      📅 {{ activeTrip()!.start_date | date: "mediumDate" }}
                       @if (activeTrip()!.end_date) {
-                        – {{ activeTrip()!.end_date | date:'mediumDate' }}
+                        – {{ activeTrip()!.end_date | date: "mediumDate" }}
                       }
                     </p>
                   }
@@ -66,17 +78,68 @@
                     <p class="trip-notes">📝 {{ activeTrip()!.notes }}</p>
                   }
                 </div>
-
                 <div class="header-actions">
-                  <button class="btn-generate-timeline" (click)="generateTimeline()">
-                    ✨ Generate Visual Timeline
+                  <button
+                    class="btn-generate-timeline"
+                    (click)="generateTimeline()"
+                  >
+                    ✨ Visual Timeline
                   </button>
-                  <button class="btn-ghost" (click)="openEditTripModal(activeTrip()!)">✏️ Edit Trip</button>
-                  <button class="btn-ghost danger-btn" (click)="deleteCurrentTrip()">🗑️ Delete Trip</button>
+                  <button
+                    class="btn-ghost"
+                    (click)="openEditTripModal(activeTrip()!)"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    class="btn-ghost danger-btn"
+                    (click)="deleteCurrentTrip()"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
 
-              <!-- VIEW MODE SWITCHER TOGGLE -->
+              <!-- STATS ROW -->
+              <div class="trip-stats-row">
+                <div class="stat-chip">
+                  <span class="stat-icon">✈️</span>
+                  <span
+                    >{{
+                      activeTrip()!.transportation?.length || 0
+                    }}
+                    Transport</span
+                  >
+                </div>
+                <div class="stat-chip">
+                  <span class="stat-icon">📍</span>
+                  <span
+                    >{{
+                      activeTrip()!.destinations?.length || 0
+                    }}
+                    Destinations</span
+                  >
+                </div>
+                <div class="stat-chip">
+                  <span class="stat-icon">🏨</span>
+                  <span>{{ totalStaysAdded() }} Stays</span>
+                </div>
+                <div class="stat-chip">
+                  <span class="stat-icon">🎟️</span>
+                  <span>{{ totalTicketsAdded() }} Tickets</span>
+                </div>
+                <div class="stat-chip">
+                  <span class="stat-icon">🎯</span>
+                  <span
+                    >{{ activeTripChecklistStats().completed }}/{{
+                      activeTripChecklistStats().total
+                    }}
+                    Tasks</span
+                  >
+                </div>
+              </div>
+
+              <!-- VIEW TOGGLE -->
               <div class="view-mode-toggle-row">
                 <div class="mode-toggle-group">
                   <button
@@ -84,95 +147,220 @@
                     [class.active]="viewMode() === 'grid'"
                     (click)="viewMode.set('grid')"
                   >
-                    📋 Detailed Grid View
+                    📋 Grid View
                   </button>
                   <button
                     class="toggle-btn"
                     [class.active]="viewMode() === 'timeline'"
                     (click)="generateTimeline()"
                   >
-                    ⏳ Chronological Visual Timeline ({{ timelineEvents().length }})
+                    ⏳ Timeline ({{ timelineEvents().length }})
                   </button>
                 </div>
               </div>
 
-              <!-- PROGRESS BAR FOR SPOT CHECKLISTS -->
+              <!-- PROGRESS BAR -->
               @if (activeTripChecklistStats().total > 0) {
                 <div class="trip-progress-box">
                   <div class="progress-labels">
-                    <span>🎯 Checklist Accomplished: {{ activeTripChecklistStats().completed }} / {{ activeTripChecklistStats().total }}</span>
+                    <span
+                      >🎯 Checklist Progress:
+                      {{ activeTripChecklistStats().completed }} /
+                      {{ activeTripChecklistStats().total }}</span
+                    >
                     <span>{{ activeTripChecklistStats().percent }}%</span>
                   </div>
                   <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" [style.width.%]="activeTripChecklistStats().percent"></div>
+                    <div
+                      class="progress-bar-fill"
+                      [style.width.%]="activeTripChecklistStats().percent"
+                    ></div>
                   </div>
                 </div>
               }
             </div>
 
-            <!-- CHRONOLOGICAL VISUAL TIMELINE VIEW -->
-            @if (viewMode() === 'timeline') {
+            <!-- TIMELINE VIEW -->
+            @if (viewMode() === "timeline") {
               <div class="timeline-view-container glass-card">
                 <div class="timeline-header">
-                  <h3 class="timeline-title">⏳ Visual Journey Timeline</h3>
-                  <p class="timeline-sub">Chronological itinerary flow combining transport passes, hotel check-ins, and spot checklists. Click ✏️ Edit to modify any item!</p>
+                  <div class="timeline-title-row">
+                    <div>
+                      <h3 class="timeline-title">⏳ Visual Journey Timeline</h3>
+                      <p class="timeline-sub">
+                        Sorted chronologically — transport passes appear
+                        <strong>before</strong> same-day destinations.
+                        <strong>Drag ⠿ any card to reorder manually.</strong>
+                      </p>
+                    </div>
+                    <div class="timeline-header-actions">
+                      <div class="timeline-legend">
+                        <span class="legend-chip transport-legend"
+                          >✈️ Transport (priority)</span
+                        >
+                        <span class="legend-chip dest-legend"
+                          >📍 Destination</span
+                        >
+                      </div>
+                      @if (hasManualOrder()) {
+                        <button
+                          class="btn-reset-order"
+                          (click)="resetTimelineOrder()"
+                        >
+                          🔄 Reset to Chronological
+                        </button>
+                      }
+                    </div>
+                  </div>
                 </div>
 
                 @if (timelineEvents().length === 0) {
                   <div class="empty-sub-card">
                     <span>⏳</span>
-                    <p>No details added to generate a timeline yet. Add transport passes or destination stops below!</p>
+                    <p>
+                      No details yet. Add transport passes or destination stops
+                      below!
+                    </p>
                   </div>
                 } @else {
-                  <div class="timeline-thread">
-                    @for (evt of timelineEvents(); track evt.id) {
-                      <div class="timeline-node" [class]="evt.type">
+                  <div
+                    class="timeline-thread"
+                    (dragover)="$event.preventDefault()"
+                  >
+                    @for (
+                      evt of timelineEvents();
+                      track evt.id;
+                      let idx = $index
+                    ) {
+                      <div
+                        class="timeline-node"
+                        [class]="evt.type"
+                        [class.drag-over]="isDraggingOver() === evt.id"
+                        [class.is-dragging]="draggingId() === evt.id"
+                        draggable="true"
+                        (dragstart)="onDragStart(evt.id)"
+                        (dragover)="onDragOver(evt.id, $event)"
+                        (dragleave)="onDragLeave()"
+                        (drop)="onDrop(evt.id)"
+                        (dragend)="onDragEnd()"
+                      >
                         <div class="node-time-badge">
-                          <span>{{ evt.displayDate }}</span>
+                          <span class="node-date-text">{{
+                            evt.displayDate
+                          }}</span>
+                          @if (!evt.rawDate) {
+                            <span class="undated-tag">No Date</span>
+                          }
                         </div>
 
-                        <div class="node-icon-circle">
-                          <span>{{ evt.icon }}</span>
+                        <div class="node-connector">
+                          <div class="drag-handle">⠿</div>
+                          <div
+                            class="node-icon-circle"
+                            [class.transport-circle]="evt.type === 'transport'"
+                          >
+                            <span>{{ evt.icon }}</span>
+                          </div>
+                          <div class="connector-line"></div>
                         </div>
 
-                        <div class="node-card glass-card">
+                        <div
+                          class="node-card glass-card"
+                          [class.transport-card-tl]="evt.type === 'transport'"
+                        >
                           <div class="node-top-row">
-                            <h4 class="node-title">{{ evt.title }}</h4>
-                            
+                            <div
+                              class="node-type-badge"
+                              [class.badge-transport]="evt.type === 'transport'"
+                              [class.badge-dest]="evt.type === 'destination'"
+                            >
+                              {{
+                                evt.type === "transport"
+                                  ? "✈️ Transport"
+                                  : "📍 Destination"
+                              }}
+                            </div>
                             <div class="node-actions">
-                              @if (evt.type === 'transport' && evt.rawTransport) {
-                                <button class="btn-node-edit" (click)="openEditTransportModal(evt.rawTransport)">✏️ Edit</button>
-                                <button class="btn-node-del" (click)="removeTransport(evt.rawTransport.id!)">✕</button>
-                              } @else if (evt.type === 'destination' && evt.rawStop) {
-                                <button class="btn-node-edit" (click)="openEditStopModal(evt.rawStop)">✏️ Edit</button>
-                                <button class="btn-node-del" (click)="removeStop(evt.rawStop.id!, evt.rawStop.place_name)">✕</button>
+                              @if (
+                                evt.type === "transport" && evt.rawTransport
+                              ) {
+                                <button
+                                  class="btn-node-edit"
+                                  (click)="
+                                    openEditTransportModal(evt.rawTransport)
+                                  "
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  class="btn-node-del"
+                                  (click)="
+                                    removeTransport(evt.rawTransport.id!)
+                                  "
+                                >
+                                  ✕
+                                </button>
+                              } @else if (
+                                evt.type === "destination" && evt.rawStop
+                              ) {
+                                <button
+                                  class="btn-node-edit"
+                                  (click)="openEditStopModal(evt.rawStop)"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  class="btn-node-del"
+                                  (click)="
+                                    removeStop(
+                                      evt.rawStop.id!,
+                                      evt.rawStop.place_name
+                                    )
+                                  "
+                                >
+                                  ✕
+                                </button>
                               }
                             </div>
                           </div>
 
+                          <h4 class="node-title">{{ evt.title }}</h4>
                           <p class="node-sub">{{ evt.subtitle }}</p>
 
                           @if (evt.refText) {
                             <div class="node-ref">{{ evt.refText }}</div>
                           }
-
                           @if (evt.notes) {
                             <div class="node-notes">💡 {{ evt.notes }}</div>
                           }
 
-                          <!-- INLINE SPOT CHECKLIST ON TIMELINE NODE -->
                           @if (evt.checklist && evt.checklist.length > 0) {
                             <div class="node-checklist">
-                              <span class="checklist-tag">SPOT TASKS:</span>
+                              <span class="checklist-tag"
+                                >🎯 SPOT TASKS ({{
+                                  getCompletedCount(evt.rawStop)
+                                }}/{{ evt.checklist.length }}):</span
+                              >
                               <div class="checklist-items-grid">
                                 @for (chk of evt.checklist; track chk.id) {
-                                  <label class="spot-task-item" [class.completed]="chk.is_completed">
+                                  <label
+                                    class="spot-task-item"
+                                    [class.completed]="chk.is_completed"
+                                  >
                                     <input
                                       type="checkbox"
                                       [checked]="chk.is_completed"
-                                      (change)="toggleChecklistItem(evt.rawStop!, chk.id, $any($event.target).checked)"
-                                    >
-                                    <span class="task-text">{{ chk.title }}</span>
+                                      (change)="
+                                        toggleChecklistItem(
+                                          evt.rawStop!,
+                                          chk.id,
+                                          $any($event.target).checked
+                                        )
+                                      "
+                                    />
+                                    <span class="task-text">{{
+                                      chk.title
+                                    }}</span>
                                   </label>
                                 }
                               </div>
@@ -182,59 +370,103 @@
                       </div>
                     }
                   </div>
+
+                  <!-- UNDATED items note -->
+                  @if (timelineEvents().length > 0) {
+                    <div class="timeline-footer-note">
+                      <span
+                        >💡 Items without dates appear at the end. Add dates to
+                        transportation or destinations for accurate
+                        ordering.</span
+                      >
+                    </div>
+                  }
                 }
               </div>
             }
 
-            <!-- SECTION 1: TRANSPORTATION HUB -->
+            <!-- SECTION 1: TRANSPORT PASSES -->
             <section class="planner-section">
               <div class="section-header">
                 <div>
                   <h3 class="section-title">🚌 🚆 ✈️ Transportation Passes</h3>
-                  <p class="section-sub">Flights, trains, buses, car rentals, or cruise details for this trip.</p>
+                  <p class="section-sub">
+                    Flights, trains, buses, car rentals, cruises — all your
+                    travel legs in one place.
+                  </p>
                 </div>
-                <button class="btn-primary" (click)="openTransportModal()">+ Add Transport</button>
+                <button class="btn-primary" (click)="openTransportModal()">
+                  + Add Transport
+                </button>
               </div>
-
-              @if (!activeTrip()!.transportation || activeTrip()!.transportation!.length === 0) {
+              @if (
+                !activeTrip()!.transportation ||
+                activeTrip()!.transportation!.length === 0
+              ) {
                 <div class="empty-sub-card glass-card">
                   <span>✈️</span>
-                  <p>No transport details added yet. Add flight numbers, train booking, or bus passes!</p>
-                  <button class="btn-secondary" (click)="openTransportModal()">+ Add Flight / Train / Bus</button>
+                  <p>
+                    No transport passes added. Add your flight, train, or bus
+                    details!
+                  </p>
+                  <button class="btn-secondary" (click)="openTransportModal()">
+                    + Add Flight / Train / Bus
+                  </button>
                 </div>
               } @else {
                 <div class="transport-grid">
                   @for (tr of activeTrip()!.transportation; track tr.id) {
                     <div class="transport-card glass-card">
                       <div class="trans-card-top">
-                        <span class="trans-mode-badge">
-                          {{ getModeConfig(tr.mode).icon }} {{ getModeConfig(tr.mode).label }}
-                        </span>
+                        <span class="trans-mode-badge"
+                          >{{ getModeConfig(tr.mode).icon }}
+                          {{ getModeConfig(tr.mode).label }}</span
+                        >
                         <div class="card-action-btns">
-                          <button class="btn-node-edit" (click)="openEditTransportModal(tr)">✏️ Edit</button>
-                          <button class="remove-mini-btn" (click)="removeTransport(tr.id!)" title="Remove Transport">✕</button>
+                          <button
+                            class="btn-node-edit"
+                            (click)="openEditTransportModal(tr)"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            class="remove-mini-btn"
+                            (click)="removeTransport(tr.id!)"
+                          >
+                            ✕
+                          </button>
                         </div>
                       </div>
-
                       <div class="trans-card-body">
                         @if (tr.carrier_or_name) {
-                          <h4 class="trans-carrier">{{ tr.carrier_or_name }}</h4>
+                          <h4 class="trans-carrier">
+                            {{ tr.carrier_or_name }}
+                          </h4>
                         }
                         @if (tr.ticket_no) {
-                          <p class="trans-ticket">🎫 <strong>Ticket/PNR:</strong> {{ tr.ticket_no }}</p>
+                          <p class="trans-ticket">
+                            🎫 <strong>Ticket:</strong> {{ tr.ticket_no }}
+                          </p>
                         }
                         @if (tr.origin || tr.destination_name) {
                           <p class="trans-route">
-                            📍 <strong>Route:</strong> {{ tr.origin || 'Departure' }} ➔ {{ tr.destination_name || 'Arrival' }}
+                            📍 <strong>Route:</strong>
+                            {{ tr.origin || "Departure" }} ➔
+                            {{ tr.destination_name || "Arrival" }}
                           </p>
                         }
                         @if (tr.departure_time || tr.arrival_time) {
                           <div class="trans-times">
                             @if (tr.departure_time) {
-                              <span>🛫 Dep: {{ tr.departure_time | date:'short' }}</span>
+                              <span
+                                >🛫
+                                {{ tr.departure_time | date: "short" }}</span
+                              >
                             }
                             @if (tr.arrival_time) {
-                              <span>🛬 Arr: {{ tr.arrival_time | date:'short' }}</span>
+                              <span
+                                >🛬 {{ tr.arrival_time | date: "short" }}</span
+                              >
                             }
                           </div>
                         }
@@ -248,91 +480,370 @@
               }
             </section>
 
-            <!-- SECTION 2: DESTINATIONS & STAYS -->
+            <!-- SECTION 2: DESTINATIONS with 3 sub-panels per card -->
             <section class="planner-section">
               <div class="section-header">
                 <div>
-                  <h3 class="section-title">📍 Destinations, Hotels & Spot Checklists</h3>
-                  <p class="section-sub">Add places you are visiting, hotel booking references, and custom spot checklists.</p>
+                  <h3 class="section-title">
+                    📍 Destinations & Itinerary Stops
+                  </h3>
+                  <p class="section-sub">
+                    Each stop has 3 sections — destination info, hotel/stay
+                    booking, and spot checklist tasks.
+                  </p>
                 </div>
-                <button class="btn-primary" (click)="openStopModal()">+ Add Place to Trip</button>
+                <button class="btn-primary" (click)="openStopModal()">
+                  + Add Destination
+                </button>
               </div>
 
-              @if (!activeTrip()!.destinations || activeTrip()!.destinations!.length === 0) {
+              @if (
+                !activeTrip()!.destinations ||
+                activeTrip()!.destinations!.length === 0
+              ) {
                 <div class="empty-sub-card glass-card">
                   <span>📍</span>
-                  <p>No places added to this trip yet. Add your first destination stop!</p>
-                  <button class="btn-secondary" (click)="openStopModal()">+ Add Destination Stop</button>
+                  <p>No destinations added yet. Add your first stop!</p>
+                  <button class="btn-secondary" (click)="openStopModal()">
+                    + Add First Destination
+                  </button>
                 </div>
               } @else {
                 <div class="stops-list">
-                  @for (stop of activeTrip()!.destinations; track stop.id; let idx = $index) {
-                    <div class="stop-card glass-card">
-                      <div class="stop-card-header">
-                        <div class="stop-title-wrap">
-                          <span class="stop-number">STOP #{{ idx + 1 }}</span>
-                          <h3 class="stop-place-name">{{ stop.place_name }}</h3>
-                          @if (stop.arrival_date || stop.departure_date) {
-                            <span class="stop-date-pill">
-                              📅 {{ stop.arrival_date | date:'MMM d' }}
-                              @if (stop.departure_date) { – {{ stop.departure_date | date:'MMM d' }} }
-                            </span>
-                          }
-                        </div>
-                        <div class="card-action-btns">
-                          <button class="btn-node-edit" (click)="openEditStopModal(stop)">✏️ Edit</button>
-                          <button class="remove-mini-btn" (click)="removeStop(stop.id!, stop.place_name)" title="Remove Place">✕</button>
-                        </div>
-                      </div>
-
-                      <!-- HOTEL / STAY DETAILS -->
-                      @if (stop.stay_name || stop.stay_booking_ref || stop.stay_address) {
-                        <div class="stay-details-box">
-                          <span class="stay-header-label">🏨 ACCOMMODATION / STAY</span>
-                          @if (stop.stay_name) {
-                            <div class="stay-name"><strong>Hotel / Resort:</strong> {{ stop.stay_name }}</div>
-                          }
-                          @if (stop.stay_booking_ref) {
-                            <div class="stay-ref">🎫 <strong>Booking Ref:</strong> {{ stop.stay_booking_ref }}</div>
-                          }
-                          @if (stop.stay_address) {
-                            <div class="stay-address">📍 <strong>Address:</strong> {{ stop.stay_address }}</div>
-                          }
-                        </div>
-                      }
-
-                      <!-- SPOT CHECKLIST FOR THIS STOP -->
-                      <div class="spot-checklist-box">
-                        <span class="checklist-header-label">🎯 SPOT CHECKLIST FOR {{ stop.place_name }}</span>
-                        
-                        <div class="add-checklist-row">
-                          <input
-                            type="text"
-                            class="form-input"
-                            placeholder="e.g. Visit sunrise point at 5:30 AM"
-                            [ngModel]="getChecklistInput(stop.id!)"
-                            (ngModelChange)="setChecklistInput(stop.id!, $event)"
-                            (keyup.enter)="addChecklistItem(stop)"
-                          >
-                          <button class="btn-secondary" (click)="addChecklistItem(stop)">+ Add Spot Task</button>
-                        </div>
-
-                        @if (stop.checklist_items && stop.checklist_items.length > 0) {
-                          <div class="checklist-items-grid">
-                            @for (item of stop.checklist_items; track item.id) {
-                              <label class="spot-task-item" [class.completed]="item.is_completed">
-                                <input
-                                  type="checkbox"
-                                  [checked]="item.is_completed"
-                                  (change)="toggleChecklistItem(stop, item.id, $any($event.target).checked)"
-                                >
-                                <span class="task-text">{{ item.title }}</span>
-                              </label>
+                  @for (
+                    stop of activeTrip()!.destinations;
+                    track stop.id;
+                    let idx = $index
+                  ) {
+                    <div class="stop-card-mega glass-card">
+                      <!-- STOP HEADER BAR -->
+                      <div class="stop-mega-header">
+                        <div class="stop-left">
+                          <div class="stop-index-orb">{{ idx + 1 }}</div>
+                          <div>
+                            <h3 class="stop-place-name">
+                              {{ stop.place_name }}
+                            </h3>
+                            @if (stop.arrival_date || stop.departure_date) {
+                              <span class="stop-date-pill">
+                                📅 {{ stop.arrival_date | date: "MMM d" }}
+                                @if (stop.departure_date) {
+                                  → {{ stop.departure_date | date: "MMM d" }}
+                                }
+                              </span>
                             }
                           </div>
-                        }
+                        </div>
+                        <div class="card-action-btns">
+                          <button
+                            class="btn-node-edit"
+                            (click)="openEditStopModal(stop)"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            class="remove-mini-btn"
+                            (click)="removeStop(stop.id!, stop.place_name)"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
+
+                      <!-- 3 MINI PANELS ROW -->
+                      <div class="stop-panels-row">
+                        <!-- PANEL A: DESTINATION INFO -->
+                        <div class="stop-panel panel-destination">
+                          <div class="panel-label-row">
+                            <span class="panel-label dest-label"
+                              >📍 DESTINATION INFO</span
+                            >
+                          </div>
+                          <div class="panel-body">
+                            @if (stop.destination) {
+                              <div class="dest-link-badge">
+                                <span>🔗 Linked to Atlas:</span>
+                                <strong>{{ stop.destination.name }}</strong>
+                              </div>
+                            }
+                            <div class="dest-dates-summary">
+                              @if (stop.arrival_date) {
+                                <div class="date-row">
+                                  <span class="date-label">🛬 Arrival</span
+                                  ><span class="date-val">{{
+                                    stop.arrival_date | date: "EEE, MMM d"
+                                  }}</span>
+                                </div>
+                              }
+                              @if (stop.departure_date) {
+                                <div class="date-row">
+                                  <span class="date-label">🛫 Departure</span
+                                  ><span class="date-val">{{
+                                    stop.departure_date | date: "EEE, MMM d"
+                                  }}</span>
+                                </div>
+                              }
+                              @if (!stop.arrival_date && !stop.departure_date) {
+                                <p class="no-data-text">No dates set</p>
+                              }
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- PANEL B: HOTEL / STAY -->
+                        <div
+                          class="stop-panel panel-stay"
+                          [class.has-stay]="stop.stay_name"
+                        >
+                          <div class="panel-label-row">
+                            <span class="panel-label stay-label"
+                              >🏨 HOTEL / STAY</span
+                            >
+                            @if (stop.stay_name) {
+                              <button
+                                class="panel-action-link danger"
+                                (click)="removeStay(stop)"
+                              >
+                                Remove
+                              </button>
+                            }
+                          </div>
+                          <div class="panel-body">
+                            @if (stop.stay_name) {
+                              <h4 class="stay-hotel-name">
+                                {{ stop.stay_name }}
+                              </h4>
+                              @if (stop.stay_booking_platform) {
+                                <div class="stay-platform-chip">
+                                  {{
+                                    getPlatformIcon(stop.stay_booking_platform)
+                                  }}
+                                  {{
+                                    getPlatformLabel(stop.stay_booking_platform)
+                                  }}
+                                </div>
+                              }
+                              @if (stop.stay_check_in || stop.stay_check_out) {
+                                <div class="stay-checkin-row">
+                                  @if (stop.stay_check_in) {
+                                    <span
+                                      >Check-in:
+                                      <strong>{{
+                                        stop.stay_check_in | date: "MMM d"
+                                      }}</strong></span
+                                    >
+                                  }
+                                  @if (stop.stay_check_out) {
+                                    <span
+                                      >Check-out:
+                                      <strong>{{
+                                        stop.stay_check_out | date: "MMM d"
+                                      }}</strong></span
+                                    >
+                                  }
+                                </div>
+                              }
+                              @if (stop.stay_booking_ref) {
+                                <div class="stay-ref-chip">
+                                  🎫 {{ stop.stay_booking_ref }}
+                                </div>
+                              }
+                              @if (stop.stay_address) {
+                                <p class="stay-addr">
+                                  📍 {{ stop.stay_address }}
+                                </p>
+                              }
+                              <button
+                                class="btn-edit-stay"
+                                (click)="openStayModal(stop)"
+                              >
+                                ✏️ Edit Stay
+                              </button>
+                            } @else {
+                              <div class="no-stay-placeholder">
+                                <span>No stay added yet</span>
+                                <button
+                                  class="btn-add-stay"
+                                  (click)="openStayModal(stop)"
+                                >
+                                  + Add Hotel / Stay
+                                </button>
+                              </div>
+                            }
+                          </div>
+                        </div>
+
+                        <!-- PANEL C: ENTRY TICKET SITE & DETAILS -->
+                        <div
+                          class="stop-panel panel-ticket"
+                          [class.has-ticket]="
+                            stop.ticket_booking_url ||
+                            stop.ticket_booking_ref ||
+                            stop.ticket_price
+                          "
+                        >
+                          <div class="panel-label-row">
+                            <span class="panel-label ticket-label"
+                              >🎟️ ENTRY TICKET & SITE</span
+                            >
+                            @if (
+                              stop.ticket_booking_url ||
+                              stop.ticket_booking_ref ||
+                              stop.ticket_price
+                            ) {
+                              <button
+                                class="panel-action-link danger"
+                                (click)="removeTicket(stop)"
+                              >
+                                Remove
+                              </button>
+                            }
+                          </div>
+                          <div class="panel-body">
+                            @if (
+                              stop.ticket_booking_url ||
+                              stop.ticket_booking_ref ||
+                              stop.ticket_price ||
+                              stop.ticket_timing_notes
+                            ) {
+                              @if (stop.ticket_price) {
+                                <div class="ticket-price-chip">
+                                  💰 {{ stop.ticket_price }}
+                                </div>
+                              }
+                              @if (stop.ticket_booking_url) {
+                                <a
+                                  [href]="
+                                    stop.ticket_booking_url.startsWith('http')
+                                      ? stop.ticket_booking_url
+                                      : 'https://' + stop.ticket_booking_url
+                                  "
+                                  target="_blank"
+                                  rel="noopener"
+                                  class="ticket-url-link"
+                                >
+                                  🌐 Open Booking Site ↗
+                                </a>
+                              }
+                              @if (stop.ticket_booking_ref) {
+                                <div class="stay-ref-chip">
+                                  🎫 Ticket: {{ stop.ticket_booking_ref }}
+                                </div>
+                              }
+                              @if (stop.ticket_timing_notes) {
+                                <p class="stay-addr">
+                                  ⏰ {{ stop.ticket_timing_notes }}
+                                </p>
+                              }
+                              <button
+                                class="btn-edit-ticket"
+                                (click)="openTicketModal(stop)"
+                              >
+                                ✏️ Edit Ticket
+                              </button>
+                            } @else {
+                              <div class="no-stay-placeholder">
+                                <span>No ticket info added</span>
+                                <button
+                                  class="btn-add-ticket"
+                                  (click)="openTicketModal(stop)"
+                                >
+                                  + Add Entry Ticket
+                                </button>
+                              </div>
+                            }
+                          </div>
+                        </div>
+
+                        <!-- PANEL D: SPOT CHECKLIST -->
+                        <div class="stop-panel panel-checklist">
+                          <div class="panel-label-row">
+                            <span class="panel-label checklist-label"
+                              >🎯 SPOT CHECKLIST</span
+                            >
+                            @if (
+                              getTasksOnly(stop.checklist_items).length > 0
+                            ) {
+                              <span class="checklist-count-badge"
+                                >{{ getCompletedCount(stop) }}/{{
+                                  getTasksOnly(stop.checklist_items).length
+                                }}</span
+                              >
+                            }
+                          </div>
+                          <div class="panel-body">
+                            <!-- ADD INPUT -->
+                            <div class="add-task-row">
+                              <input
+                                type="text"
+                                class="task-input"
+                                placeholder="e.g. Visit at sunrise 5:30 AM"
+                                [ngModel]="getChecklistInput(stop.id!)"
+                                (ngModelChange)="
+                                  setChecklistInput(stop.id!, $event)
+                                "
+                                (keyup.enter)="addChecklistItem(stop)"
+                              />
+                              <button
+                                class="btn-add-task"
+                                (click)="addChecklistItem(stop)"
+                              >
+                                + Add
+                              </button>
+                            </div>
+
+                            <!-- TASK LIST -->
+                            @if (
+                              getTasksOnly(stop.checklist_items).length > 0
+                            ) {
+                              <div class="task-list">
+                                @for (
+                                  item of getTasksOnly(stop.checklist_items);
+                                  track item.id
+                                ) {
+                                  <div
+                                    class="task-row"
+                                    [class.task-done]="item.is_completed"
+                                  >
+                                    <label class="task-label">
+                                      <input
+                                        type="checkbox"
+                                        [checked]="item.is_completed"
+                                        (change)="
+                                          toggleChecklistItem(
+                                            stop,
+                                            item.id,
+                                            $any($event.target).checked
+                                          )
+                                        "
+                                      />
+                                      <span class="task-text">{{
+                                        item.title
+                                      }}</span>
+                                    </label>
+                                    <button
+                                      class="task-del-btn"
+                                      (click)="
+                                        removeChecklistItem(stop, item.id)
+                                      "
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                }
+                              </div>
+                            } @else {
+                              <p class="no-data-text">
+                                No tasks yet. Add things to do at
+                                {{ stop.place_name }}!
+                              </p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <!-- end panels row -->
                     </div>
+                    <!-- end stop-card-mega -->
                   }
                 </div>
               }
@@ -349,8 +860,9 @@
   @if (showCreateModal()) {
     <div class="modal-overlay" (click)="showCreateModal.set(false)">
       <div class="modal-card glass-card" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">{{ isEditingTrip() ? '✏️ Edit Trip' : '✨ Create New Journey' }}</h3>
-        
+        <h3 class="modal-title">
+          {{ isEditingTrip() ? "✏️ Edit Journey" : "✨ Create New Journey" }}
+        </h3>
         <div class="form-group full-width">
           <label>Trip Title *</label>
           <input
@@ -359,9 +871,8 @@
             placeholder="e.g. Golden Triangle & Goa Summer Escape"
             [ngModel]="newTripTitle()"
             (ngModelChange)="newTripTitle.set($event)"
-          >
+          />
         </div>
-
         <div class="form-row-2">
           <div class="form-group">
             <label>Start Date (Optional)</label>
@@ -370,7 +881,7 @@
               class="form-input"
               [ngModel]="newTripStartDate()"
               (ngModelChange)="newTripStartDate.set($event)"
-            >
+            />
           </div>
           <div class="form-group">
             <label>End Date (Optional)</label>
@@ -379,35 +890,45 @@
               class="form-input"
               [ngModel]="newTripEndDate()"
               (ngModelChange)="newTripEndDate.set($event)"
-            >
+            />
           </div>
         </div>
-
         <div class="form-group full-width">
           <label>Trip Notes (Optional)</label>
           <textarea
             class="form-textarea"
             rows="3"
-            placeholder="e.g. Pack light cotton clothes, carry international driving permit"
+            placeholder="e.g. Pack light cotton clothes..."
             [ngModel]="newTripNotes()"
             (ngModelChange)="newTripNotes.set($event)"
           ></textarea>
         </div>
-
         <div class="modal-actions">
-          <button class="btn-primary" (click)="saveTrip()">{{ isEditingTrip() ? 'Save Changes' : 'Create Trip' }}</button>
-          <button class="btn-ghost" (click)="showCreateModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="saveTrip()">
+            {{ isEditingTrip() ? "Save Changes" : "Create Trip" }}
+          </button>
+          <button class="btn-ghost" (click)="showCreateModal.set(false)">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- MODAL 2: ADD TRANSPORTATION PASS -->
+  <!-- MODAL 2: TRANSPORT PASS -->
   @if (showTransportModal()) {
     <div class="modal-overlay" (click)="showTransportModal.set(false)">
-      <div class="modal-card glass-card" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">{{ activeModeConfig().modalTitle }}</h3>
-        
+      <div
+        class="modal-card glass-card wide-modal"
+        (click)="$event.stopPropagation()"
+      >
+        <h3 class="modal-title">
+          {{
+            editingTransport()
+              ? "✏️ Edit Transport Pass"
+              : activeModeConfig().modalTitle
+          }}
+        </h3>
         <div class="form-group full-width">
           <label>Select Travel Mode *</label>
           <div class="mode-selector-grid">
@@ -417,23 +938,32 @@
                 [class.selected]="transMode() === m.value"
                 (click)="transMode.set(m.value)"
               >
-                <span>{{ m.icon }}</span>
-                <span>{{ m.label }}</span>
+                <span>{{ m.icon }}</span
+                ><span>{{ m.label }}</span>
               </button>
             }
           </div>
         </div>
-
         <div class="form-row-2">
-          <div class="form-group">
+          <div class="form-group autocomplete-group">
             <label>{{ activeModeConfig().nameLabel }}</label>
             <input
               type="text"
               class="form-input"
               [placeholder]="activeModeConfig().namePlaceholder"
               [ngModel]="transCarrier()"
-              (ngModelChange)="transCarrier.set($event)"
-            >
+              (ngModelChange)="onTransCarrierInput($event)"
+            />
+            @if (showTrainSuggestions()) {
+              <div class="autocomplete-dropdown glass-card">
+                @for (t of trainSuggestions(); track t.code) {
+                  <div class="suggestion-item" (click)="selectTrain(t)">
+                    <span class="sugg-icon">🚆</span>
+                    <span class="sugg-name">{{ t.name }}</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
           <div class="form-group">
             <label>{{ activeModeConfig().ticketLabel }}</label>
@@ -443,33 +973,57 @@
               [placeholder]="activeModeConfig().ticketPlaceholder"
               [ngModel]="transTicketNo()"
               (ngModelChange)="transTicketNo.set($event)"
-            >
+            />
           </div>
         </div>
-
         <div class="form-row-2">
-          <div class="form-group">
-            <label>{{ activeModeConfig().originLabel }}</label>
+          <div class="form-group autocomplete-group">
+            <label>{{ activeModeConfig().originLabel }} (Code / Name)</label>
             <input
               type="text"
               class="form-input"
               [placeholder]="activeModeConfig().originPlaceholder"
               [ngModel]="transOrigin()"
-              (ngModelChange)="transOrigin.set($event)"
-            >
+              (ngModelChange)="onOriginInput($event)"
+            />
+            @if (showDepSuggestions()) {
+              <div class="autocomplete-dropdown glass-card">
+                @for (s of depStationSuggestions(); track s.code) {
+                  <div class="suggestion-item" (click)="selectDepStation(s)">
+                    <span class="sugg-icon">{{
+                      s.type === "airport" ? "✈️" : "🚉"
+                    }}</span>
+                    <span class="sugg-name">{{ s.name }}</span>
+                    <span class="sugg-code">{{ s.code }}</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
-          <div class="form-group">
-            <label>{{ activeModeConfig().destLabel }}</label>
+          <div class="form-group autocomplete-group">
+            <label>{{ activeModeConfig().destLabel }} (Code / Name)</label>
             <input
               type="text"
               class="form-input"
               [placeholder]="activeModeConfig().destPlaceholder"
               [ngModel]="transDestination()"
-              (ngModelChange)="transDestination.set($event)"
-            >
+              (ngModelChange)="onDestinationInput($event)"
+            />
+            @if (showArrSuggestions()) {
+              <div class="autocomplete-dropdown glass-card">
+                @for (s of arrStationSuggestions(); track s.code) {
+                  <div class="suggestion-item" (click)="selectArrStation(s)">
+                    <span class="sugg-icon">{{
+                      s.type === "airport" ? "✈️" : "🚉"
+                    }}</span>
+                    <span class="sugg-name">{{ s.name }}</span>
+                    <span class="sugg-code">{{ s.code }}</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
-
         <div class="form-row-2">
           <div class="form-group">
             <label>Departure Date & Time (Optional)</label>
@@ -478,7 +1032,7 @@
               class="form-input"
               [ngModel]="transDepartureTime()"
               (ngModelChange)="transDepartureTime.set($event)"
-            >
+            />
           </div>
           <div class="form-group">
             <label>Arrival Date & Time (Optional)</label>
@@ -487,10 +1041,9 @@
               class="form-input"
               [ngModel]="transArrivalTime()"
               (ngModelChange)="transArrivalTime.set($event)"
-            >
+            />
           </div>
         </div>
-
         <div class="form-group full-width">
           <label>{{ activeModeConfig().notesLabel }}</label>
           <input
@@ -499,23 +1052,33 @@
             [placeholder]="activeModeConfig().notesPlaceholder"
             [ngModel]="transNotes()"
             (ngModelChange)="transNotes.set($event)"
-          >
+          />
         </div>
-
         <div class="modal-actions">
-          <button class="btn-primary" (click)="addTransport()">Save {{ getModeConfig(transMode()).label }} Pass</button>
-          <button class="btn-ghost" (click)="showTransportModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="addTransport()">
+            {{
+              editingTransport()
+                ? "Save Changes"
+                : "Save " + getModeConfig(transMode()).label + " Pass"
+            }}
+          </button>
+          <button class="btn-ghost" (click)="showTransportModal.set(false)">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- MODAL 3: ADD DESTINATION STOP & HOTEL -->
+  <!-- MODAL 3: ADD / EDIT DESTINATION STOP -->
   @if (showStopModal()) {
     <div class="modal-overlay" (click)="showStopModal.set(false)">
       <div class="modal-card glass-card" (click)="$event.stopPropagation()">
-        <h3 class="modal-title">📍 Add Destination Stop & Hotel</h3>
-        
+        <h3 class="modal-title">
+          {{
+            editingStop() ? "✏️ Edit Destination" : "📍 Add Destination Stop"
+          }}
+        </h3>
         <div class="form-group full-width">
           <label>Select from Atlas Destinations (Optional)</label>
           <select
@@ -529,7 +1092,6 @@
             }
           </select>
         </div>
-
         <div class="form-group full-width">
           <label>Place Name *</label>
           <input
@@ -538,9 +1100,8 @@
             placeholder="e.g. Oia Village, Santorini"
             [ngModel]="stopPlaceName()"
             (ngModelChange)="stopPlaceName.set($event)"
-          >
+          />
         </div>
-
         <div class="form-row-2">
           <div class="form-group">
             <label>Arrival Date (Optional)</label>
@@ -549,7 +1110,7 @@
               class="form-input"
               [ngModel]="stopArrivalDate()"
               (ngModelChange)="stopArrivalDate.set($event)"
-            >
+            />
           </div>
           <div class="form-group">
             <label>Departure Date (Optional)</label>
@@ -558,47 +1119,173 @@
               class="form-input"
               [ngModel]="stopDepartureDate()"
               (ngModelChange)="stopDepartureDate.set($event)"
-            >
+            />
           </div>
         </div>
+        <div class="modal-actions">
+          <button class="btn-primary" (click)="addStop()">
+            {{ editingStop() ? "Save Changes" : "Add to Itinerary" }}
+          </button>
+          <button class="btn-ghost" (click)="showStopModal.set(false)">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
+  <!-- MODAL 4: HOTEL / STAY DETAILS -->
+  @if (showStayModal()) {
+    <div class="modal-overlay" (click)="showStayModal.set(false)">
+      <div
+        class="modal-card glass-card wide-modal"
+        (click)="$event.stopPropagation()"
+      >
+        <h3 class="modal-title">
+          🏨 Hotel / Stay Details — {{ stayForStop()?.place_name }}
+        </h3>
+        <div class="form-group full-width">
+          <label>Hotel / Resort / Airbnb / Hostel Name (Optional)</label>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g. Taj Mahal Palace, Mumbai"
+            [ngModel]="stayName()"
+            (ngModelChange)="stayName.set($event)"
+          />
+        </div>
+        <div class="form-group full-width">
+          <label>Booked via Platform (Optional)</label>
+          <div class="platform-selector-grid">
+            @for (p of bookingPlatforms; track p.value) {
+              <button
+                class="platform-btn"
+                [class.selected]="stayBookingPlatform() === p.value"
+                (click)="stayBookingPlatform.set(p.value)"
+              >
+                <span>{{ p.icon }}</span
+                ><span>{{ p.label }}</span>
+              </button>
+            }
+          </div>
+        </div>
         <div class="form-row-2">
           <div class="form-group">
-            <label>Hotel / Resort / Airbnb Name (Optional)</label>
-            <input
-              type="text"
-              class="form-input"
-              placeholder="e.g. Canaves Oia Suites"
-              [ngModel]="stopStayName()"
-              (ngModelChange)="stopStayName.set($event)"
-            >
-          </div>
-          <div class="form-group">
-            <label>Hotel Booking Ref (Optional)</label>
+            <label>Booking Reference / Confirmation No. (Optional)</label>
             <input
               type="text"
               class="form-input"
               placeholder="e.g. Booking.com #938291"
-              [ngModel]="stopStayBookingRef()"
-              (ngModelChange)="stopStayBookingRef.set($event)"
-            >
+              [ngModel]="stayBookingRef()"
+              (ngModelChange)="stayBookingRef.set($event)"
+            />
+          </div>
+          <div class="form-group">
+            <label>Hotel Address / Location (Optional)</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="e.g. Apollo Bunder, Colaba, Mumbai"
+              [ngModel]="stayAddress()"
+              (ngModelChange)="stayAddress.set($event)"
+            />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Check-in Date (Optional)</label>
+            <input
+              type="date"
+              class="form-input"
+              [ngModel]="stayCheckIn()"
+              (ngModelChange)="stayCheckIn.set($event)"
+            />
+          </div>
+          <div class="form-group">
+            <label>Check-out Date (Optional)</label>
+            <input
+              type="date"
+              class="form-input"
+              [ngModel]="stayCheckOut()"
+              (ngModelChange)="stayCheckOut.set($event)"
+            />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-primary" (click)="saveStay()">
+            💾 Save Stay Details
+          </button>
+          <button class="btn-ghost" (click)="showStayModal.set(false)">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL 5: ENTRY TICKET DETAILS -->
+  @if (showTicketModal()) {
+    <div class="modal-overlay" (click)="showTicketModal.set(false)">
+      <div
+        class="modal-card glass-card wide-modal"
+        (click)="$event.stopPropagation()"
+      >
+        <h3 class="modal-title">
+          🎟️ Entry Ticket Details — {{ ticketForStop()?.place_name }}
+        </h3>
+
+        <div class="form-group full-width">
+          <label>Booking Website / Direct Link (Optional)</label>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g. https://asi.payumoney.com or bookmyshow.com"
+            [ngModel]="ticketUrl()"
+            (ngModelChange)="ticketUrl.set($event)"
+          />
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Ticket Reference / Confirmation No. (Optional)</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="e.g. ASI-TAJ-98214"
+              [ngModel]="ticketRef()"
+              (ngModelChange)="ticketRef.set($event)"
+            />
+          </div>
+          <div class="form-group">
+            <label>Ticket Price / Entry Fee (Optional)</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="e.g. ₹50 / person or $25"
+              [ngModel]="ticketPrice()"
+              (ngModelChange)="ticketPrice.set($event)"
+            />
           </div>
         </div>
 
         <div class="form-group full-width">
-          <label>Hotel Address / Location Notes (Optional)</label>
+          <label>Visit Time Slot / Important Notes (Optional)</label>
           <input
             type="text"
             class="form-input"
-            placeholder="e.g. Main Street Oia, Cyclades Islands, Greece"
-            [ngModel]="stopStayAddress()"
-            (ngModelChange)="stopStayAddress.set($event)"
-          >
+            placeholder="e.g. Sunrise slot 6:00 AM - 7:30 AM (Bring ID card)"
+            [ngModel]="ticketTimingNotes()"
+            (ngModelChange)="ticketTimingNotes.set($event)"
+          />
         </div>
 
         <div class="modal-actions">
-          <button class="btn-primary" (click)="addStop()">Add Stop to Itinerary</button>
-          <button class="btn-ghost" (click)="showStopModal.set(false)">Cancel</button>
+          <button class="btn-primary" (click)="saveTicket()">
+            💾 Save Ticket Details
+          </button>
+          <button class="btn-ghost" (click)="showTicketModal.set(false)">
+            Cancel
+          </button>
         </div>
       </div>
     </div>

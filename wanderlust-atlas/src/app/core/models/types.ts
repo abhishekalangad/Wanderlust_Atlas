@@ -198,6 +198,14 @@ export interface TripDestination {
   stay_name?: string | null;
   stay_address?: string | null;
   stay_booking_ref?: string | null;
+  stay_booking_platform?: string | null;
+  stay_check_in?: string | null;
+  stay_check_out?: string | null;
+  ticket_required?: boolean | null;
+  ticket_booking_url?: string | null;
+  ticket_booking_ref?: string | null;
+  ticket_price?: string | null;
+  ticket_timing_notes?: string | null;
   checklist_items?: TripChecklistItem[];
   order_index?: number;
   created_at?: string;
