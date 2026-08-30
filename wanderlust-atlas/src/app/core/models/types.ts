@@ -88,6 +88,28 @@ export interface UserFollow {
   created_at: string;
 }
 
+export type ActivityCategory = 'must_do' | 'food' | 'stay' | 'photography' | 'general';
+
+export interface UserActivity {
+  id: string;
+  user_id: string;
+  destination_id?: string | null;
+  title: string;
+  category: ActivityCategory;
+  is_completed: boolean;
+  notes?: string | null;
+  created_at: string;
+  destination?: Destination;
+}
+
+export const ACTIVITY_CATEGORIES: { value: ActivityCategory; label: string; icon: string }[] = [
+  { value: 'must_do', label: 'Must Do', icon: '🎯' },
+  { value: 'food', label: 'Food & Dining', icon: '🍜' },
+  { value: 'stay', label: 'Stays & Hotels', icon: '🏨' },
+  { value: 'photography', label: 'Photography', icon: '📸' },
+  { value: 'general', label: 'General Task', icon: '📝' },
+];
+
 export interface DestinationFilters {
   category?: DestinationCategory;
   continent?: string;

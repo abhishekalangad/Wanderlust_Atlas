@@ -94,7 +94,163 @@
         </div>
 
         <!-- ITEMS -->
-        @if (filteredItems().length === 0) {
+        @if (activeTab() === 'activities') {
+          <div class="activities-section">
+            
+            <!-- GAMIFIED PROGRESS HEADER -->
+            <div class="activities-progress-card glass-card">
+              <div class="progress-info-row">
+                <div class="progress-left">
+                  <span class="progress-icon">🎯</span>
+                  <div>
+                    <h3 class="activities-title">My Personal Checklist</h3>
+                    <p class="activities-sub">Strictly private to your profile · Add custom goals, activities, food spots & notes</p>
+                  </div>
+                </div>
+                <div class="progress-right">
+                  <div class="progress-stat">
+                    <span class="stat-num">{{ completedActivitiesCount() }} / {{ totalActivitiesCount() }}</span>
+                    <span class="stat-label">Tasks Done</span>
+                  </div>
+                  <button class="btn-primary add-task-btn" (click)="showActivityForm.set(!showActivityForm())">
+                    {{ showActivityForm() ? '✕ Close Form' : '+ Add Personal Task' }}
+                  </button>
+                </div>
+              </div>
+
+              @if (totalActivitiesCount() > 0) {
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill" [style.width.%]="activitiesProgressPercent()"></div>
+                </div>
+                <div class="progress-footer">
+                  <span class="progress-percentage">{{ activitiesProgressPercent() }}% Completed</span>
+                  <span class="progress-hint">
+                    @if (activitiesProgressPercent() === 100) {
+                      🎉 Amazing! All personal tasks completed!
+                    } @else {
+                      🔥 {{ totalActivitiesCount() - completedActivitiesCount() }} adventures left on your checklist
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+
+            <!-- CREATE ACTIVITY FORM -->
+            @if (showActivityForm()) {
+              <div class="activity-form-card glass-card">
+                <h4 class="form-title">✨ Create New Personal Task</h4>
+                <div class="activity-form-grid">
+                  <div class="form-group full-width">
+                    <label>Task / Activity Description *</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      placeholder="e.g. Paragliding in Bir Billing 🪂"
+                      [ngModel]="newActivityTitle()"
+                      (ngModelChange)="newActivityTitle.set($event)"
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>Category</label>
+                    <select
+                      class="form-select"
+                      [ngModel]="newActivityCategory()"
+                      (ngModelChange)="newActivityCategory.set($event)"
+                    >
+                      @for (cat of activityCategories; track cat.value) {
+                        <option [value]="cat.value">{{ cat.icon }} {{ cat.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Link to Bucket List Destination (Optional)</label>
+                    <select
+                      class="form-select"
+                      [ngModel]="newActivityDestinationId()"
+                      (ngModelChange)="newActivityDestinationId.set($event)"
+                    >
+                      <option value="">General / Any Destination</option>
+                      @for (item of bucketList.items(); track item.id) {
+                        @if (item.destination) {
+                          <option [value]="item.destination.id">{{ item.destination.name }} ({{ item.destination.country }})</option>
+                        }
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group full-width">
+                    <label>Personal Notes / Details (Optional)</label>
+                    <input
+                      type="text"
+                      class="form-input"
+                      placeholder="e.g. Best month October-March, book tandem flight package"
+                      [ngModel]="newActivityNotes()"
+                      (ngModelChange)="newActivityNotes.set($event)"
+                    >
+                  </div>
+                </div>
+                <div class="activity-form-actions">
+                  <button class="btn-primary" (click)="createActivity()">Add to My Checklist</button>
+                  <button class="btn-ghost" (click)="showActivityForm.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <!-- ACTIVITIES LIST -->
+            @if (activitiesService.activities().length === 0) {
+              <div class="empty-list">
+                <span>🎯</span>
+                <h3>No personal tasks added yet</h3>
+                <p>Create your custom itinerary checklist, food spots, and private travel notes!</p>
+                <button class="btn-primary" (click)="showActivityForm.set(true)">+ Add Your First Task</button>
+              </div>
+            } @else {
+              <div class="activities-grid">
+                @for (act of activitiesService.activities(); track act.id) {
+                  <div class="activity-card glass-card" [class.completed]="act.is_completed">
+                    <div class="activity-card-top">
+                      <label class="activity-checkbox-wrap">
+                        <input
+                          type="checkbox"
+                          [checked]="act.is_completed"
+                          (change)="toggleActivity(act.id, $any($event.target).checked)"
+                        >
+                        <span class="custom-checkbox">
+                          @if (act.is_completed) { ✓ }
+                        </span>
+                      </label>
+                      
+                      <div class="activity-meta">
+                        <span class="activity-cat-badge" [class]="act.category">
+                          {{ act.category === 'must_do' ? '🎯 MUST DO' : act.category === 'food' ? '🍜 FOOD' : act.category === 'stay' ? '🏨 STAY' : act.category === 'photography' ? '📸 PHOTO' : '📝 TASK' }}
+                        </span>
+                        @if (act.destination) {
+                          <a [routerLink]="['/destination', act.destination.id]" class="activity-dest-badge">
+                            📍 {{ act.destination.name }}
+                          </a>
+                        }
+                      </div>
+
+                      <button class="remove-btn" (click)="deleteActivity(act.id)" title="Delete Task">✕</button>
+                    </div>
+
+                    <div class="activity-card-body">
+                      <h4 class="activity-title">{{ act.title }}</h4>
+                      @if (act.notes) {
+                        <p class="activity-notes">💡 {{ act.notes }}</p>
+                      }
+                    </div>
+
+                    @if (act.is_completed) {
+                      <div class="completed-ribbon">
+                        <span>🎉 ACCOMPLISHED</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else if (filteredItems().length === 0) {
           <div class="empty-list">
             <span>🌍</span>
             <h3>No destinations here yet</h3>

@@ -9,9 +9,10 @@ import { ToastService } from '../../core/services/toast.service';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
 import { FooterComponent } from '../../shared/components/footer/footer.component';
 import { CategoryIconPipe } from '../../shared/pipes/category-icon.pipe';
-import { BucketListItem, BucketListStatus, STATUS_CONFIG } from '../../core/models/types';
+import { UserActivitiesService } from '../../core/services/user-activities.service';
+import { BucketListItem, BucketListStatus, STATUS_CONFIG, UserActivity, ACTIVITY_CATEGORIES, ActivityCategory } from '../../core/models/types';
 
-type BucketTab = 'all' | BucketListStatus;
+type BucketTab = 'all' | BucketListStatus | 'activities';
 
 @Component({
   selector: 'app-profile',
@@ -23,7 +24,8 @@ type BucketTab = 'all' | BucketListStatus;
 export class ProfileComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private profileService = inject(ProfileService);
-  private bucketList = inject(BucketListService);
+  bucketList = inject(BucketListService);
+  activitiesService = inject(UserActivitiesService);
   private toast = inject(ToastService);
   private fb = inject(FormBuilder);
 
@@ -33,20 +35,37 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   activeTab = signal<BucketTab>('all');
 
+  // Personal Activity Form state
+  showActivityForm = signal(false);
+  newActivityTitle = signal('');
+  newActivityCategory = signal<ActivityCategory>('must_do');
+  newActivityNotes = signal('');
+  newActivityDestinationId = signal<string>('');
+
   readonly statusConfig = STATUS_CONFIG;
+  readonly activityCategories = ACTIVITY_CATEGORIES;
   readonly statusKeys: BucketListStatus[] = ['dreaming', 'planning', 'booked', 'completed'];
   readonly tabs: { value: BucketTab; label: string; icon: string }[] = [
-    { value: 'all', label: 'All', icon: '🌍' },
+    { value: 'all', label: 'All Places', icon: '🌍' },
     { value: 'dreaming', label: 'Dreaming', icon: '✨' },
     { value: 'planning', label: 'Planning', icon: '📋' },
     { value: 'booked', label: 'Booked', icon: '✈️' },
     { value: 'completed', label: 'Completed', icon: '✅' },
+    { value: 'activities', label: 'My Checklist', icon: '🎯' },
   ];
 
   profileForm: FormGroup = this.fb.group({
     username: ['', [Validators.required, Validators.minLength(3)]],
     full_name: [''],
     bio: [''],
+  });
+
+  completedActivitiesCount = computed(() => this.activitiesService.activities().filter(a => a.is_completed).length);
+  totalActivitiesCount = computed(() => this.activitiesService.activities().length);
+  activitiesProgressPercent = computed(() => {
+    const total = this.totalActivitiesCount();
+    if (!total) return 0;
+    return Math.round((this.completedActivitiesCount() / total) * 100);
   });
 
   filteredItems = computed<BucketListItem[]>(() => {
@@ -62,7 +81,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const user = this.auth.currentUser();
     if (!user) return;
 
-    await this.bucketList.loadUserBucketList(user.id);
+    await Promise.all([
+      this.bucketList.loadUserBucketList(user.id),
+      this.activitiesService.loadActivities()
+    ]);
     this.bucketList.subscribeToChanges(user.id);
 
     const profile = this.auth.currentProfile();
@@ -78,6 +100,48 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {}
+
+  async createActivity(): Promise<void> {
+    const title = this.newActivityTitle().trim();
+    if (!title) {
+      this.toast.error('Please enter an activity description');
+      return;
+    }
+
+    const { error } = await this.activitiesService.addActivity({
+      title,
+      category: this.newActivityCategory(),
+      notes: this.newActivityNotes().trim() || null,
+      destination_id: this.newActivityDestinationId() || null,
+      is_completed: false,
+    });
+
+    if (!error) {
+      this.toast.success('🎯 Personal activity added to your checklist!');
+      this.newActivityTitle.set('');
+      this.newActivityNotes.set('');
+      this.newActivityDestinationId.set('');
+      this.showActivityForm.set(false);
+    } else {
+      this.toast.error('Failed to add activity. Please try again.');
+    }
+  }
+
+  async toggleActivity(id: string, isCompleted: boolean): Promise<void> {
+    const success = await this.activitiesService.toggleActivityCompleted(id, isCompleted);
+    if (success) {
+      if (isCompleted) {
+        this.toast.success('🎉 Activity completed!');
+      }
+    }
+  }
+
+  async deleteActivity(id: string): Promise<void> {
+    const success = await this.activitiesService.deleteActivity(id);
+    if (success) {
+      this.toast.info('Activity removed from checklist');
+    }
+  }
 
   async saveProfile(): Promise<void> {
     if (this.profileForm.invalid) return;
@@ -122,6 +186,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   getTabCount(tab: BucketTab): number {
     if (tab === 'all') return this.bucketList.items().length;
+    if (tab === 'activities') return this.activitiesService.activities().length;
     return this.bucketList.items().filter(i => i.status === tab).length;
   }
 }

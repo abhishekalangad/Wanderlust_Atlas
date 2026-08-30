@@ -80,7 +80,11 @@
                   @for (dest of pendingDestinations(); track dest.id) {
                     <tr>
                       <td>
-                        <img [src]="dest.image_url || 'assets/images/placeholder.jpg'" class="table-thumb" [alt]="dest.name">
+                        @if (dest.image_url) {
+                          <img [src]="dest.image_url" class="table-thumb" [alt]="dest.name">
+                        } @else {
+                          <div class="table-thumb-placeholder">📷</div>
+                        }
                       </td>
                       <td class="table-name">{{ dest.name }}</td>
                       <td class="table-muted">{{ dest.country }}</td>
@@ -105,10 +109,24 @@
       @if (activeTab() === 'destinations') {
         <div class="tab-content">
           <div class="tab-toolbar">
-            <h2 class="tab-title">Destinations ({{ destinations().length }})</h2>
-            @if (!showAddForm()) {
-              <button class="btn-primary" (click)="showAddForm.set(true)">+ Add Destination</button>
-            }
+            <h2 class="tab-title">Destinations ({{ filteredDestinations().length }})</h2>
+            <div class="toolbar-actions">
+              <div class="admin-search-box">
+                <input
+                  type="text"
+                  class="form-input search-input"
+                  placeholder="🔍 Search destinations by name, country, or category..."
+                  [ngModel]="destSearchQuery()"
+                  (ngModelChange)="destSearchQuery.set($event)"
+                >
+                @if (destSearchQuery()) {
+                  <button class="clear-search" (click)="destSearchQuery.set('')">✕</button>
+                }
+              </div>
+              @if (!showAddForm()) {
+                <button class="btn-primary" (click)="showAddForm.set(true)">+ Add Destination</button>
+              }
+            </div>
           </div>
 
           <!-- ADD/EDIT FORM -->
@@ -228,10 +246,14 @@
                 </tr>
               </thead>
               <tbody>
-                @for (dest of destinations(); track dest.id) {
+                @for (dest of filteredDestinations(); track dest.id) {
                   <tr>
                     <td>
-                      <img [src]="dest.image_url || 'assets/images/placeholder.jpg'" class="table-thumb" [alt]="dest.name">
+                      @if (dest.image_url) {
+                        <img [src]="dest.image_url" class="table-thumb" [alt]="dest.name">
+                      } @else {
+                        <div class="table-thumb-placeholder">📷</div>
+                      }
                     </td>
                     <td class="table-name">{{ dest.name }}</td>
                     <td class="table-muted">{{ dest.country }}</td>

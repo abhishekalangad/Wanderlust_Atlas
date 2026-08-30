@@ -37,9 +37,22 @@ export class AuthComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (this.auth.isLoggedIn()) {
-      this.router.navigate(['/profile']);
+    // Pre-fill email if remembered from previous login or signup
+    const rememberedEmail = localStorage.getItem('wanderlust_remember_email');
+    if (rememberedEmail) {
+      this.signInForm.patchValue({ email: rememberedEmail });
     }
+
+    if (this.auth.isLoggedIn()) {
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') 
+        || localStorage.getItem('wanderlust_return_url') 
+        || '/profile';
+      localStorage.removeItem('wanderlust_return_url');
+      this.toast.success('Welcome to Wanderlust Atlas! 🌍');
+      this.router.navigateByUrl(returnUrl);
+      return;
+    }
+
     const tab = this.route.snapshot.queryParamMap.get('tab');
     if (tab === 'signup') this.activeTab.set('signup');
   }
@@ -56,6 +69,11 @@ export class AuthComponent implements OnInit {
       this.toast.error(error.message || 'Sign in failed. Please check your credentials.');
     } else {
       this.toast.success('Welcome back! 🌍');
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') 
+        || localStorage.getItem('wanderlust_return_url') 
+        || '/profile';
+      localStorage.removeItem('wanderlust_return_url');
+      this.router.navigateByUrl(returnUrl);
     }
   }
 
@@ -70,13 +88,16 @@ export class AuthComponent implements OnInit {
     if (error) {
       this.toast.error(error.message || 'Sign up failed. Please try again.');
     } else {
-      this.toast.success('Welcome to Wanderlust Atlas! 🎉 Check your email to confirm.');
+      this.toast.success('🎉 Account created successfully! Please sign in to continue.');
+      this.signInForm.patchValue({ email });
+      this.activeTab.set('signin');
     }
   }
 
   async signInWithGoogle(): Promise<void> {
     this.loading.set(true);
-    const { error } = await this.auth.signInWithGoogle();
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/profile';
+    const { error } = await this.auth.signInWithGoogle(returnUrl);
     if (error) {
       this.toast.error('Google sign-in failed. Please try again.');
       this.loading.set(false);

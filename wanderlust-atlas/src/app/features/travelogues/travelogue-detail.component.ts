@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TravelogueService } from '../../core/services/travelogue.service';
 import { AuthService } from '../../core/services/auth.service';
+import { SpeechService } from '../../core/services/speech.service';
 import { FooterComponent } from '../../shared/components/footer/footer.component';
 import { LoaderComponent } from '../../shared/components/loader/loader.component';
 import { Travelogue } from '../../core/models/types';
@@ -64,6 +65,39 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
         <!-- STORY CONTENT -->
         <main class="container story-main">
+          <!-- AUDIO PLAYER BAR -->
+          <div class="story-audio-bar glass-card" [class.active]="speech.isPlaying()">
+            <div class="audio-info">
+              <div class="audio-pulse-wrap">
+                <span class="audio-icon">{{ speech.isPlaying() && !speech.isPaused() ? '🔊' : '🎧' }}</span>
+                @if (speech.isPlaying() && !speech.isPaused()) {
+                  <span class="audio-waves">
+                    <span></span><span></span><span></span>
+                  </span>
+                }
+              </div>
+              <div>
+                <h4 class="audio-title">Audio Story Reader</h4>
+                <p class="audio-sub">
+                  {{ speech.isPlaying() ? (speech.isPaused() ? 'Paused' : 'Reading story aloud...') : 'Too lazy to read? Listen to this travel story!' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="audio-actions">
+              @if (speech.isPlaying()) {
+                @if (speech.isPaused()) {
+                  <button type="button" class="btn-audio play" (click)="speech.resume()">▶️ Resume</button>
+                } @else {
+                  <button type="button" class="btn-audio pause" (click)="speech.pause()">⏸️ Pause</button>
+                }
+                <button type="button" class="btn-audio stop" (click)="speech.stop()">⏹️ Stop</button>
+              } @else {
+                <button type="button" class="btn-audio listen" (click)="listenStory()">🔊 Listen to Story</button>
+              }
+            </div>
+          </div>
+
           @if (travelogue()!.excerpt) {
             <p class="story-lead">{{ travelogue()!.excerpt }}</p>
           }
@@ -97,11 +131,12 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   `,
   styleUrls: ['./travelogue-detail.component.scss'],
 })
-export class TravelogueDetailComponent implements OnInit {
+export class TravelogueDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private travelogueService = inject(TravelogueService);
   private auth = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
+  speech = inject(SpeechService);
 
   travelogue = signal<Travelogue | null>(null);
   loading = signal(true);
@@ -120,6 +155,7 @@ export class TravelogueDetailComponent implements OnInit {
       const id = params.get('id');
       if (!id) return;
 
+      this.speech.stop();
       window.scrollTo({ top: 0, behavior: 'instant' });
       this.loading.set(true);
       this.travelogue.set(null);
@@ -138,8 +174,19 @@ export class TravelogueDetailComponent implements OnInit {
     });
   }
 
+  listenStory(): void {
+    const t = this.travelogue();
+    if (!t) return;
+    const bodyText = (t.excerpt ? `${t.excerpt}. ` : '') + t.content;
+    this.speech.speak(bodyText, t.title);
+  }
+
   formattedContent(): string {
     const content = this.travelogue()?.content || '';
     return content.replace(/\n/g, '<br>');
+  }
+
+  ngOnDestroy(): void {
+    this.speech.stop();
   }
 }

@@ -7,12 +7,19 @@
       <div class="skeleton-line medium"></div>
     </div>
   } @else if (destination) {
-    <img
-      [src]="destination.image_url || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80'"
-      [alt]="destination.name"
-      loading="lazy"
-      (error)="onImageError($event)"
-    >
+    @if (destination.image_url) {
+      <img
+        [src]="destination.image_url"
+        [alt]="destination.name"
+        loading="lazy"
+        (error)="onImageError($event)"
+      >
+    } @else {
+      <div class="blank-img-placeholder">
+        <span class="blank-icon">📷</span>
+        <span class="blank-text">Image Pending</span>
+      </div>
+    }
     <div class="dest-card-overlay"></div>
     <div class="dest-card-content">
       <p class="dest-mood">
@@ -26,9 +33,9 @@
       }
 
       <div class="dest-actions">
-        <a [routerLink]="['/destination', destination.id]" class="dest-view-btn">
+        <button type="button" class="dest-view-btn" (click)="onViewDetails($event)">
           View Details
-        </a>
+        </button>
         @if (isInList()) {
           <button class="dest-add-btn added" (click)="removeFromList($event)">
             {{ currentStatus()?.icon }} {{ currentStatus()?.label }}

@@ -146,11 +146,18 @@ export class TravelogueCreateComponent implements OnInit {
 
     let finalDestinationId = this.form.value.destination_id || null;
     const customName = this.form.value.custom_destination_name?.trim();
+    const coverUrl = this.form.value.cover_image_url || undefined;
 
-    if (!finalDestinationId && customName) {
-      const destObj = await this.destService.getOrCreateDestinationByName(customName, user.id);
+    if (customName) {
+      const destObj = await this.destService.getOrCreateDestinationByName(customName, user.id, coverUrl);
       if (destObj) {
         finalDestinationId = destObj.id;
+      }
+    } else if (finalDestinationId && coverUrl) {
+      // If user selected an existing destination that currently has no image, auto-update destination image!
+      const existingDest = this.destService.destinations().find(d => d.id === finalDestinationId);
+      if (existingDest && !existingDest.image_url) {
+        await this.destService.updateDestination(finalDestinationId, { image_url: coverUrl });
       }
     }
 
@@ -162,6 +169,7 @@ export class TravelogueCreateComponent implements OnInit {
       pdf_url: this.form.value.pdf_url,
       user_id: user.id,
       destination_id: finalDestinationId,
+      is_published: true,
     };
 
     if (this.isEditMode() && this.editId()) {

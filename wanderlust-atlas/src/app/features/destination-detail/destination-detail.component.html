@@ -10,11 +10,15 @@
 } @else {
   <!-- HERO -->
   <div class="detail-hero">
-    <img
-      [src]="destination()!.image_url || 'assets/images/placeholder.jpg'"
-      [alt]="destination()!.name"
-      class="detail-hero-img"
-    >
+    @if (destination()!.image_url) {
+      <img
+        [src]="destination()!.image_url!"
+        [alt]="destination()!.name"
+        class="detail-hero-img"
+      >
+    } @else {
+      <div class="detail-hero-blank"></div>
+    }
     <div class="detail-hero-overlay"></div>
     <div class="detail-hero-content container">
       <div class="detail-breadcrumb">
@@ -31,11 +35,14 @@
       <h1 class="detail-title">{{ destination()!.name }}</h1>
       <p class="detail-subtitle">{{ destination()!.country }}, {{ destination()!.continent }}</p>
 
-      <!-- MOOD TAGS -->
+      <!-- MOOD TAGS & AUDIO READER -->
       <div class="detail-mood-tags">
         @for (tag of destination()!.mood_tags; track tag) {
           <span class="mood-tag">{{ tag }}</span>
         }
+        <button type="button" class="mood-tag audio-btn-tag" (click)="listenOverview()">
+          {{ speech.isPlaying() ? '⏸️ Pause Voice' : '🔊 Listen Overview' }}
+        </button>
       </div>
     </div>
   </div>
@@ -136,6 +143,47 @@
             </div>
           </div>
         </section>
+
+        <!-- PERSONAL ITINERARY CHECKLIST FOR THIS DESTINATION -->
+        @if (auth.isLoggedIn()) {
+          <section class="detail-section">
+            <h2 class="detail-section-title">
+              <span class="title-icon">🎯</span> My Personal Checklist for {{ destination()!.name }}
+            </h2>
+            <div class="personal-dest-card glass-card">
+              <p class="personal-sub">Add custom spots, restaurants, or tasks strictly private to your account for this trip.</p>
+              
+              <div class="add-personal-task-row">
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="e.g. Visit Oia Castle at sunset for photography"
+                  [ngModel]="newPersonalTask()"
+                  (ngModelChange)="newPersonalTask.set($event)"
+                  (keyup.enter)="addPersonalTask()"
+                >
+                <button class="btn-primary" (click)="addPersonalTask()">+ Add Task</button>
+              </div>
+
+              @if (personalActivities().length > 0) {
+                <div class="personal-tasks-list">
+                  @for (act of personalActivities(); track act.id) {
+                    <div class="personal-task-item" [class.completed]="act.is_completed">
+                      <label class="task-checkbox-label">
+                        <input
+                          type="checkbox"
+                          [checked]="act.is_completed"
+                          (change)="togglePersonalTask(act.id, $any($event.target).checked)"
+                        >
+                        <span class="task-title">{{ act.title }}</span>
+                      </label>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
       </div>
 
       <!-- RIGHT: Add to List -->

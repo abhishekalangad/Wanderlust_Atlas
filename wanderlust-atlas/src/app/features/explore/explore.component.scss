@@ -58,10 +58,24 @@
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
-  padding: 28px;
+  padding: 24px;
   position: sticky;
-  top: 100px;
+  top: 90px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
   backdrop-filter: blur(16px);
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+    &:hover { background: var(--coral); }
+  }
 }
 
 .sidebar-header {
@@ -227,12 +241,21 @@
   .explore-layout { grid-template-columns: 1fr; }
   .filter-sidebar {
     position: static;
+    max-height: none;
+    overflow-y: visible;
     display: none;
+    margin-bottom: 24px;
 
     &.open { display: block; }
   }
-  .mobile-filter-bar { display: flex; }
+  .mobile-filter-bar { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
   .desktop-search { display: none; }
+  .destinations-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .explore-header { padding: 110px 16px 40px; }
+  .destinations-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {

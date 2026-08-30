@@ -98,6 +98,21 @@
   text-transform: uppercase;
   font-weight: 500;
   backdrop-filter: blur(8px);
+
+  &.audio-btn-tag {
+    background: rgba(255, 107, 74, 0.2);
+    border-color: rgba(255, 107, 74, 0.5);
+    color: var(--coral);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: 'Inter', sans-serif;
+
+    &:hover {
+      background: var(--coral);
+      color: white;
+      transform: translateY(-2px);
+    }
+  }
 }
 
 // Body
@@ -172,12 +187,24 @@
 }
 
 // Sidebar
+.detail-sidebar {
+  position: sticky;
+  top: 90px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 100px; }
+}
+
 .bucket-action-card {
   padding: 28px;
   border-radius: 20px;
-  margin-bottom: 20px;
-  position: sticky;
-  top: 100px;
 }
 
 .bucket-action-title {
@@ -254,6 +281,63 @@
   strong { color: var(--amber); }
 }
 
+// Personal Checklist Card
+.personal-dest-card {
+  padding: 24px;
+  border-radius: 18px;
+  margin-top: 12px;
+}
+
+.personal-sub {
+  color: var(--white-60);
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+}
+
+.add-personal-task-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  .form-input {
+    flex: 1;
+    border-radius: 12px;
+  }
+}
+
+.personal-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.personal-task-item {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  transition: all 0.25s;
+
+  &.completed {
+    opacity: 0.5;
+    .task-title { text-decoration: line-through; }
+  }
+}
+
+.task-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 0.92rem;
+
+  input[type=checkbox] {
+    width: 18px; height: 18px;
+    accent-color: var(--coral);
+    cursor: pointer;
+  }
+}
+
 // Related
 .related-section { margin-bottom: 0; }
 
@@ -277,19 +361,27 @@
 
 @media (max-width: 1024px) {
   .detail-layout { grid-template-columns: 1fr; }
+  .detail-sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
   .bucket-action-card { position: static; }
 }
 
 @media (max-width: 768px) {
-  .detail-hero { min-height: 380px; height: 55vh; }
+  .detail-hero { min-height: 340px; height: 50vh; }
   .detail-hero-content { bottom: 20px; }
-  .detail-body { padding: 32px 16px 0; }
-  .detail-title { font-size: 2.2rem; }
+  .detail-body { padding: 24px 16px 0; }
+  .detail-title { font-size: 2rem; }
   .facts-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .fact-card { padding: 14px 12px; }
+  .add-personal-task-row { flex-direction: column; }
 }
 
 @media (max-width: 480px) {
   .facts-grid { grid-template-columns: 1fr; }
   .detail-subtitle { font-size: 0.95rem; }
+  .personal-dest-card { padding: 16px; }
 }

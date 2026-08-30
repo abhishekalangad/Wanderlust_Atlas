@@ -32,6 +32,23 @@ export class DestinationCardComponent {
   readonly statusConfig = STATUS_CONFIG;
   readonly skeletons = Array(3).fill(0);
 
+  readonly categoryFallbacks: Record<string, string> = {
+    beach: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    nature: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+    culture: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
+    adventure: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?auto=format&fit=crop&w=1200&q=80',
+    wildlife: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=1200&q=80',
+    city: 'https://images.unsplash.com/photo-1477959858617-67f30ac72604?auto=format&fit=crop&w=1200&q=80',
+    road_trip: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=80',
+    spiritual: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  };
+
+  getCardImage(): string {
+    if (this.destination?.image_url) return this.destination.image_url;
+    const cat = this.destination?.category || 'nature';
+    return this.categoryFallbacks[cat] || this.categoryFallbacks['nature'];
+  }
+
   isInList(): boolean {
     return this.destination ? this.bucketList.isInList(this.destination.id) : false;
   }
@@ -55,6 +72,21 @@ export class DestinationCardComponent {
   formatCost(cost: number | null | undefined): string {
     if (!cost) return '';
     return cost.toLocaleString();
+  }
+
+  onViewDetails(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.destination) return;
+
+    if (this.auth.isLoggedIn()) {
+      this.router.navigate(['/destination', this.destination.id]);
+    } else {
+      this.toast.info('Please sign in to view destination details & travel guides 🔐');
+      this.router.navigate(['/auth'], {
+        queryParams: { returnUrl: `/destination/${this.destination.id}` }
+      });
+    }
   }
 
   async addToList(event: Event): Promise<void> {

@@ -25,44 +25,74 @@
   }
 }
 
+.blank-img-placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 74, 0.06) 0%, rgba(10, 15, 30, 0.98) 100%), #0c1222;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 16px;
+
+  .blank-text {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+    padding: 3px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+}
+
 .dest-card-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(10, 15, 30, 0.97) 0%,
-    rgba(10, 15, 30, 0.5) 50%,
-    transparent 100%
+    rgba(10, 15, 30, 0.98) 0%,
+    rgba(10, 15, 30, 0.6) 60%,
+    rgba(10, 15, 30, 0.2) 100%
   );
   transition: opacity 0.3s;
+  pointer-events: none;
 }
 
 .dest-card-content {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  padding: 28px;
+  padding: 18px 20px 20px;
+  z-index: 2;
 }
 
 .dest-mood {
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--amber);
-  margin-bottom: 8px;
-  font-weight: 500;
+  margin-bottom: 6px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .dest-name {
   font-family: 'Playfair Display', serif;
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 4px;
   color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dest-country {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--white-60);
   margin-bottom: 8px;
 }

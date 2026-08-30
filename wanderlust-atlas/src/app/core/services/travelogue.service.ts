@@ -17,8 +17,8 @@ export class TravelogueService {
 
     let query = this.supabase.client
       .from('travelogues')
-      .select('*, profile:profiles(*), destination:destinations(*)')
-      .eq('is_published', true)
+      .select('*, profile:profiles!left(*), destination:destinations!left(*)')
+      .or('is_published.eq.true,is_published.is.null')
       .order('created_at', { ascending: false });
 
     if (destinationId) {
@@ -32,13 +32,14 @@ export class TravelogueService {
       this._travelogues.set(data as Travelogue[]);
       return data as Travelogue[];
     }
+    console.error('getTravelogues error:', error);
     return [];
   }
 
   async getTravelogueById(id: string): Promise<Travelogue | null> {
     const { data, error } = await this.supabase.client
       .from('travelogues')
-      .select('*, profile:profiles(*), destination:destinations(*)')
+      .select('*, profile:profiles!left(*), destination:destinations!left(*)')
       .eq('id', id)
       .single();
 
@@ -49,7 +50,7 @@ export class TravelogueService {
     const { data, error } = await this.supabase.client
       .from('travelogues')
       .insert(travelogue)
-      .select('*, profile:profiles(*), destination:destinations(*)')
+      .select('*, profile:profiles!left(*), destination:destinations!left(*)')
       .single();
 
     if (!error && data) {

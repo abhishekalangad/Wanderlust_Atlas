@@ -44,6 +44,9 @@ export class AuthService {
     this.supabase.client.auth.onAuthStateChange(async (event, session) => {
       this._user.set(session?.user ?? null);
       if (session?.user) {
+        if (session.user.email) {
+          localStorage.setItem('wanderlust_remember_email', session.user.email);
+        }
         await this.loadProfile(session.user.id);
       } else {
         this._profile.set(null);
@@ -76,7 +79,7 @@ export class AuthService {
     });
 
     if (!error && data.user) {
-      await this.router.navigate(['/profile']);
+      localStorage.setItem('wanderlust_remember_email', email);
     }
 
     return { error };
@@ -86,17 +89,24 @@ export class AuthService {
     const { error } = await this.supabase.client.auth.signInWithPassword({ email, password });
 
     if (!error) {
-      await this.router.navigate(['/profile']);
+      localStorage.setItem('wanderlust_remember_email', email);
     }
 
     return { error };
   }
 
-  async signInWithGoogle(): Promise<{ error: AuthError | null }> {
+  async signInWithGoogle(returnUrl?: string): Promise<{ error: AuthError | null }> {
+    const target = returnUrl || '/profile';
+    localStorage.setItem('wanderlust_return_url', target);
+
     const { error } = await this.supabase.client.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/profile`,
+        redirectTo: `${window.location.origin}/auth`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        }
       },
     });
     return { error };

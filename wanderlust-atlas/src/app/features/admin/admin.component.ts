@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -29,6 +29,19 @@ export class AdminComponent implements OnInit {
   destinations = signal<Destination[]>([]);
   pendingDestinations = signal<Destination[]>([]);
   users = signal<any[]>([]);
+
+  destSearchQuery = signal('');
+  filteredDestinations = computed(() => {
+    const q = this.destSearchQuery().toLowerCase().trim();
+    const list = this.destinations();
+    if (!q) return list;
+    return list.filter(d =>
+      d.name?.toLowerCase().includes(q) ||
+      d.country?.toLowerCase().includes(q) ||
+      d.category?.toLowerCase().includes(q) ||
+      d.continent?.toLowerCase().includes(q)
+    );
+  });
 
   showAddForm = signal(false);
   editingDestination = signal<Destination | null>(null);
@@ -107,7 +120,16 @@ export class AdminComponent implements OnInit {
       const { url, error } = await this.destService.uploadDestinationImage(file);
       if (!error && url) {
         this.destForm.patchValue({ image_url: url });
-        this.toast.success('Image uploaded!');
+
+        // Auto-save image_url to Supabase DB immediately if editing
+        const editing = this.editingDestination();
+        if (editing) {
+          await this.destService.updateDestination(editing.id, { image_url: url });
+          await this.loadDashboard();
+          this.toast.success('🎉 Image uploaded & URL automatically updated in Supabase!');
+        } else {
+          this.toast.success('Image uploaded to Supabase Storage!');
+        }
       } else {
         this.toast.error('Image upload failed. You can also paste an Image URL.');
       }

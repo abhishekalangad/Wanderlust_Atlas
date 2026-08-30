@@ -196,6 +196,64 @@
   &.round { border-radius: 50%; width: 40px; height: 40px; }
 }
 
+.table-thumb-placeholder {
+  width: 52px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--white-40);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.admin-search-box {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+
+  .search-input {
+    width: 100%;
+    padding: 10px 36px 10px 14px;
+    font-size: 0.88rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--white);
+    transition: all 0.25s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--coral);
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .clear-search {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--white-40);
+    cursor: pointer;
+    font-size: 0.9rem;
+
+    &:hover { color: var(--white); }
+  }
+}
+
 .table-avatar-placeholder {
   width: 40px; height: 40px;
   border-radius: 50%;
