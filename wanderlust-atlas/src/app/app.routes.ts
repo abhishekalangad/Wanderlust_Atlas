@@ -71,6 +71,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'trips',
+    loadComponent: () =>
+      import('./features/trip-planner/trip-planner.component').then(m => m.TripPlannerComponent),
+    title: 'Interactive Trip Planner — Wanderlust Atlas',
+    canActivate: [authGuard],
+  },
+  {
     path: 'profile',
     loadComponent: () =>
       import('./features/profile/profile.component').then(m => m.ProfileComponent),

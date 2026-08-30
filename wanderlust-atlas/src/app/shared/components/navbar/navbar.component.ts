@@ -19,6 +19,7 @@ import { ToastService } from '../../../core/services/toast.service';
         <li><a routerLink="/explore" routerLinkActive="active" (click)="closeMenu()">Explore</a></li>
         <li><a routerLink="/travelogues" routerLinkActive="active" (click)="closeMenu()">Travelogues</a></li>
         @if (auth.isLoggedIn()) {
+          <li><a routerLink="/trips" routerLinkActive="active" (click)="closeMenu()">✈️ Planner</a></li>
           <li><a routerLink="/profile" routerLinkActive="active" (click)="closeMenu()">My List</a></li>
           <li><a routerLink="/suggest-destination" routerLinkActive="active" (click)="closeMenu()">+ Suggest Place</a></li>
         }

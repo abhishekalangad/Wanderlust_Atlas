@@ -164,3 +164,64 @@ export const STATUS_CONFIG: Record<BucketListStatus, { label: string; icon: stri
   booked: { label: 'Booked', icon: '✈️', color: '#60a5fa' },
   completed: { label: 'Completed', icon: '✅', color: '#22c55e' },
 };
+
+// TRIP PLANNER MODELS
+export type TransportationMode = 'plane' | 'train' | 'bus' | 'car' | 'ship' | 'bike';
+
+export interface TripTransportation {
+  id?: string;
+  trip_id?: string;
+  mode: TransportationMode;
+  carrier_or_name?: string | null;
+  ticket_no?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  origin?: string | null;
+  destination_name?: string | null;
+  notes?: string | null;
+  created_at?: string;
+}
+
+export interface TripChecklistItem {
+  id: string;
+  title: string;
+  is_completed: boolean;
+}
+
+export interface TripDestination {
+  id?: string;
+  trip_id?: string;
+  destination_id?: string | null;
+  place_name: string;
+  arrival_date?: string | null;
+  departure_date?: string | null;
+  stay_name?: string | null;
+  stay_address?: string | null;
+  stay_booking_ref?: string | null;
+  checklist_items?: TripChecklistItem[];
+  order_index?: number;
+  created_at?: string;
+  destination?: Destination;
+}
+
+export interface Trip {
+  id: string;
+  user_id: string;
+  title: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  notes?: string | null;
+  cover_image_url?: string | null;
+  created_at: string;
+  transportation?: TripTransportation[];
+  destinations?: TripDestination[];
+}
+
+export const TRANSPORT_MODES: { value: TransportationMode; label: string; icon: string }[] = [
+  { value: 'plane', label: 'Flight / Aeroplane', icon: '✈️' },
+  { value: 'train', label: 'Train / Railway', icon: '🚆' },
+  { value: 'bus', label: 'Bus / Coach', icon: '🚌' },
+  { value: 'car', label: 'Car / Road Trip', icon: '🚗' },
+  { value: 'ship', label: 'Ship / Cruise / Ferry', icon: '🚢' },
+  { value: 'bike', label: 'Motorbike / Bicycle', icon: '🏍️' },
+];
