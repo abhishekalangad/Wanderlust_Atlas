@@ -149,7 +149,7 @@ export class TravelogueCreateComponent implements OnInit {
     const coverUrl = this.form.value.cover_image_url || undefined;
 
     if (customName) {
-      const destObj = await this.destService.getOrCreateDestinationByName(customName, user.id, coverUrl);
+      const destObj = await this.destService.findExistingDestinationByName(customName, coverUrl);
       if (destObj) {
         finalDestinationId = destObj.id;
       }

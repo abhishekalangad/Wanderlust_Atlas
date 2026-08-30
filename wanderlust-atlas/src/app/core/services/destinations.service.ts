@@ -243,7 +243,7 @@ export class DestinationsService {
     };
   }
 
-  async getOrCreateDestinationByName(name: string, userId: string, coverImageUrl?: string): Promise<Destination | null> {
+  async findExistingDestinationByName(name: string, coverImageUrl?: string): Promise<Destination | null> {
     const cleanName = name.trim();
     if (!cleanName) return null;
 
@@ -254,7 +254,6 @@ export class DestinationsService {
       .maybeSingle();
 
     if (existing) {
-      // If destination exists but has no image, auto-update with coverImageUrl
       if (!existing.image_url && coverImageUrl) {
         await this.updateDestination(existing.id, { image_url: coverImageUrl });
         existing.image_url = coverImageUrl;
@@ -262,25 +261,6 @@ export class DestinationsService {
       return existing as Destination;
     }
 
-    const { data: created, error } = await this.supabase.client
-      .from('destinations')
-      .insert({
-        name: cleanName,
-        country: 'India',
-        continent: 'Asia',
-        category: 'culture',
-        description: `Travel destination featured in community travelogue: ${cleanName}`,
-        image_url: coverImageUrl || null,
-        approval_status: 'approved',
-        submitted_by: userId
-      })
-      .select('*')
-      .single();
-
-    if (!error && created) {
-      this._destinations.update(d => [created as Destination, ...d]);
-      return created as Destination;
-    }
     return null;
   }
 }
