@@ -9,6 +9,12 @@ export class SpeechService implements OnDestroy {
 
   readonly isPlaying = signal<boolean>(false);
   readonly isPaused = signal<boolean>(false);
+  readonly playbackRate = signal<number>(1.0);
+  readonly speedRates: number[] = [0.50, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+  setPlaybackRate(rate: number): void {
+    this.playbackRate.set(rate);
+  }
 
   constructor() {
     if (this.synth) {
@@ -50,7 +56,7 @@ export class SpeechService implements OnDestroy {
     const chunkText = this.chunks[this.currentChunkIndex];
     const utterance = new SpeechSynthesisUtterance(chunkText);
     utterance.lang = 'en-US';
-    utterance.rate = 0.93;
+    utterance.rate = 0.93 * this.playbackRate();
     utterance.pitch = 1.12;
 
     const voices = this.synth.getVoices();

@@ -85,6 +85,17 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
             </div>
 
             <div class="audio-actions">
+              <!-- SLEEK PLAYBACK SPEED TOGGLE PILL -->
+              <button
+                type="button"
+                class="btn-speed-toggle"
+                (click)="cyclePlaybackRate()"
+                [title]="'Playback Speed: ' + speech.playbackRate() + 'x (Click to change)'"
+              >
+                <span class="speed-icon">⚡</span>
+                <span class="speed-val">{{ speech.playbackRate() }}x</span>
+              </button>
+
               @if (speech.isPlaying()) {
                 @if (speech.isPaused()) {
                   <button type="button" class="btn-audio play" (click)="speech.resume()">▶️ Resume</button>
@@ -181,9 +192,21 @@ export class TravelogueDetailComponent implements OnInit, OnDestroy {
     this.speech.speak(bodyText, t.title);
   }
 
+  cyclePlaybackRate(): void {
+    const current = this.speech.playbackRate();
+    const rates = [1.0, 1.25, 1.5, 2.0, 0.75];
+    const idx = rates.indexOf(current);
+    const nextRate = rates[(idx + 1) % rates.length];
+    this.speech.setPlaybackRate(nextRate);
+  }
+
   formattedContent(): string {
     const content = this.travelogue()?.content || '';
-    return content.replace(/\n/g, '<br>');
+    const paragraphs = content.split(/\n\s*\n/);
+    return paragraphs
+      .filter(p => p.trim().length > 0)
+      .map(p => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
+      .join('');
   }
 
   ngOnDestroy(): void {
