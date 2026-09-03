@@ -25,6 +25,20 @@ export const BOOKING_PLATFORMS = [
   { value: 'other', label: 'Other / Walk-in', icon: '🏠' },
 ];
 
+export const TRANSPORT_BOOKING_PLATFORMS = [
+  { value: 'redbus', label: 'RedBus', icon: '🚌' },
+  { value: 'abhibus', label: 'AbhiBus', icon: '🚍' },
+  { value: 'makemytrip', label: 'MakeMyTrip', icon: '🔴' },
+  { value: 'goibibo', label: 'Goibibo', icon: '🟢' },
+  { value: 'ixigo', label: 'Ixigo', icon: '⚡' },
+  { value: 'irctc', label: 'IRCTC', icon: '🚉' },
+  { value: 'state_rtc', label: 'State RTC', icon: '🚌' },
+  { value: 'zingbus', label: 'Zingbus / IntrCity', icon: '🚍' },
+  { value: 'uber_cab', label: 'Uber / Cab / Taxi', icon: '🚕' },
+  { value: 'direct_operator', label: 'Direct Operator / Stand', icon: '🎟️' },
+  { value: 'other', label: 'Other', icon: '🏷️' },
+];
+
 @Component({
   selector: 'app-trip-planner',
   standalone: true,
@@ -41,6 +55,7 @@ export class TripPlannerComponent implements OnInit {
 
   transportModes = TRANSPORT_MODES;
   bookingPlatforms = BOOKING_PLATFORMS;
+  transportBookingPlatforms = TRANSPORT_BOOKING_PLATFORMS;
 
   activeTrip = signal<Trip | null>(null);
   viewMode = signal<'grid' | 'timeline'>('grid');
@@ -55,6 +70,7 @@ export class TripPlannerComponent implements OnInit {
   editingTransport = signal<TripTransportation | null>(null);
   editingStop = signal<TripDestination | null>(null);
   stayForStop = signal<TripDestination | null>(null);
+  stayOriginalStopId = signal<string | null>(null);
   ticketForStop = signal<TripDestination | null>(null);
 
   expandedStayPanels = signal<Record<string, boolean>>({});
@@ -68,11 +84,17 @@ export class TripPlannerComponent implements OnInit {
   transMode = signal<TransportationMode>('plane');
   transCarrier = signal<string>('');
   transTicketNo = signal<string>('');
+  transPnrNo = signal<string>('');
   transOrigin = signal<string>('');
   transDestination = signal<string>('');
   transDepartureTime = signal<string>('');
   transArrivalTime = signal<string>('');
   transNotes = signal<string>('');
+  transBusNo = signal<string>('');
+  transAmount = signal<string>('');
+  transBookingPlatform = signal<string>('');
+  transBookingPlatformOther = signal<string>('');
+  transportModeFilter = signal<string>('all');
 
   // Station & Train Autocomplete signals
   depStationSuggestions = signal<LocationSuggestion[]>([]);
@@ -91,8 +113,15 @@ export class TripPlannerComponent implements OnInit {
   stayAddress = signal<string>('');
   stayBookingRef = signal<string>('');
   stayBookingPlatform = signal<string>('');
+  stayBookingPlatformOther = signal<string>('');
   stayCheckIn = signal<string>('');
   stayCheckOut = signal<string>('');
+  stayRate = signal<string>('');
+  stayStatus = signal<'confirmed' | 'cancelled' | ''>('');
+  stayRefundStatus = signal<'complete' | 'pending' | ''>('');
+  stayContact = signal<string>('');
+  stayRoomType = signal<string>('');
+  stayNotes = signal<string>('');
 
   // Entry Ticket form signals
   ticketRequired = signal<boolean>(false);
@@ -105,6 +134,72 @@ export class TripPlannerComponent implements OnInit {
 
   getTasksOnly(items?: TripChecklistItem[]): TripChecklistItem[] {
     return (items || []).filter(i => !i.id.startsWith('__meta_'));
+  }
+
+  expandedStops = signal<Set<string>>(new Set());
+  expandedTimelineItems = signal<Set<string>>(new Set());
+
+  toggleStopExpanded(stopId: string): void {
+    this.expandedStops.update(prev => {
+      const next = new Set(prev);
+      if (next.has(stopId)) {
+        next.delete(stopId);
+      } else {
+        next.add(stopId);
+      }
+      return next;
+    });
+  }
+
+  isStopExpanded(stopId: string): boolean {
+    return this.expandedStops().has(stopId);
+  }
+
+  toggleAllStops(expand: boolean): void {
+    const trip = this.activeTrip();
+    if (!trip?.destinations) return;
+    if (expand) {
+      this.expandedStops.set(new Set(trip.destinations.map(d => d.id!)));
+    } else {
+      this.expandedStops.set(new Set());
+    }
+  }
+
+  areAllStopsExpanded(): boolean {
+    const trip = this.activeTrip();
+    if (!trip?.destinations || trip.destinations.length === 0) return false;
+    return trip.destinations.every(d => this.expandedStops().has(d.id!));
+  }
+
+  toggleTimelineExpanded(id: string): void {
+    this.expandedTimelineItems.update(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  isTimelineExpanded(id: string): boolean {
+    return this.expandedTimelineItems().has(id);
+  }
+
+  toggleAllTimelineItems(expand: boolean): void {
+    const events = this.timelineEvents();
+    if (expand) {
+      this.expandedTimelineItems.set(new Set(events.map(e => e.id)));
+    } else {
+      this.expandedTimelineItems.set(new Set());
+    }
+  }
+
+  areAllTimelineItemsExpanded(): boolean {
+    const events = this.timelineEvents();
+    if (events.length === 0) return false;
+    return events.every(e => this.expandedTimelineItems().has(e.id));
   }
 
   activeTripChecklistStats = computed(() => {
@@ -125,6 +220,35 @@ export class TripPlannerComponent implements OnInit {
     return trip.destinations.filter(d => d.stay_name).length;
   });
 
+  sortedTransportation = computed(() => {
+    const trip = this.activeTrip();
+    if (!trip?.transportation) return [];
+    const filter = this.transportModeFilter();
+    let list = [...trip.transportation];
+    if (filter !== 'all') {
+      list = list.filter(tr => tr.mode === filter);
+    }
+    list.sort((a, b) => {
+      if (!a.departure_time && !b.departure_time) return 0;
+      if (!a.departure_time) return 1;
+      if (!b.departure_time) return -1;
+      return new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
+    });
+    return list;
+  });
+
+  getTransportCountByMode(mode: string): number {
+    const trip = this.activeTrip();
+    if (!trip?.transportation) return 0;
+    return trip.transportation.filter(tr => tr.mode === mode).length;
+  }
+
+  destinationsWithStays = computed(() => {
+    const trip = this.activeTrip();
+    if (!trip?.destinations) return [];
+    return trip.destinations.filter(d => !!d.stay_name);
+  });
+
   totalTicketsAdded = computed(() => {
     const trip = this.activeTrip();
     if (!trip?.destinations) return 0;
@@ -140,6 +264,7 @@ export class TripPlannerComponent implements OnInit {
       case 'car': return { nameLabel: 'Car Model / Rental Agency', namePlaceholder: 'e.g. Zoomcar Thar / Hertz SUV', ticketLabel: 'License Plate / Rental Ref', ticketPlaceholder: 'e.g. KA-01-AB-1234', originLabel: 'Pick-up Location', originPlaceholder: 'e.g. Airport Car Rental Counter', destLabel: 'Drop-off Location', destPlaceholder: 'e.g. Resort Valet Parking', notesLabel: 'Driver / Fuel / Toll Notes', notesPlaceholder: 'e.g. Fastag enabled, Driver: Ramesh', modalTitle: 'Add Car / Road Trip' };
       case 'ship': return { nameLabel: 'Ship / Cruise Line', namePlaceholder: 'e.g. Cordelia Cruises / Catamaran', ticketLabel: 'Cabin / Ticket Ref', ticketPlaceholder: 'e.g. Cruise Booking #CR-93820', originLabel: 'Boarding Port', originPlaceholder: 'e.g. Mumbai Pier #4', destLabel: 'Arrival Port', destPlaceholder: 'e.g. Mormugao Port, Goa', notesLabel: 'Cabin No & Deck', notesPlaceholder: 'e.g. Ocean View Cabin #402, Deck 6', modalTitle: 'Add Ship / Cruise Pass' };
       case 'bike': return { nameLabel: 'Bike Model / Rental', namePlaceholder: 'e.g. Royal Enfield Himalayan 450', ticketLabel: 'Bike Reg / Rental Contract', ticketPlaceholder: 'e.g. Agreement #BR-502', originLabel: 'Pick-up Point', originPlaceholder: 'e.g. Manali Bike Rental Hub', destLabel: 'Drop-off Point', destPlaceholder: 'e.g. Leh Bike Depot', notesLabel: 'Riding Gear & Notes', notesPlaceholder: 'e.g. Helmets & panniers included', modalTitle: 'Add Bike / Motorbike Pass' };
+      case 'irctc_dormitory': return { nameLabel: 'Dormitory / Room Type', namePlaceholder: 'e.g. AC Dormitory 4-Bed / Retiring Room', ticketLabel: 'IRCTC PNR / Booking Ref', ticketPlaceholder: 'e.g. PNR #4829103951', originLabel: 'Railway Station', originPlaceholder: 'e.g. New Delhi (NDLS)', destLabel: 'Amount Paid', destPlaceholder: 'e.g. ₹450 for 12 hrs', notesLabel: 'Additional Notes', notesPlaceholder: 'e.g. Bed no. 3, Bring receipt printout', modalTitle: 'Add IRCTC Dormitory / Retiring Room' };
     }
   });
 
@@ -153,73 +278,148 @@ export class TripPlannerComponent implements OnInit {
     if (!trip) return [];
     const events: any[] = [];
 
+    // Robust timestamp parser supporting ISO, text formats ("23 Mar, 07:00"), and year normalization
+    const parseTs = (val: string | null | undefined): number | null => {
+      if (!val || typeof val !== 'string') return null;
+      const trimmed = val.trim();
+      if (!trimmed) return null;
+
+      // Extract reference year from trip start date or current year (e.g. 2026)
+      const currentYear = trip.start_date ? new Date(trip.start_date).getFullYear() : new Date().getFullYear();
+
+      // 1. Try ISO cleaning
+      const cleaned = trimmed.includes(' ') && !trimmed.includes('T') ? trimmed.replace(' ', 'T') : trimmed;
+      let d = new Date(cleaned);
+      if (!isNaN(d.getTime())) {
+        if (d.getFullYear() < 2000) d.setFullYear(currentYear);
+        return d.getTime();
+      }
+
+      // 2. Try raw string
+      d = new Date(trimmed);
+      if (!isNaN(d.getTime())) {
+        if (d.getFullYear() < 2000) d.setFullYear(currentYear);
+        return d.getTime();
+      }
+
+      // 3. Match format like "23 Mar, 07:00" or "23 Mar 07:00" or "23 Mar"
+      const match = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)(?:,?\s+(\d{1,2}):(\d{2}))?/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const monthStr = match[2].toLowerCase();
+        const hour = match[3] ? parseInt(match[3], 10) : 0;
+        const min = match[4] ? parseInt(match[4], 10) : 0;
+        const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+        const monthIdx = months.findIndex(m => monthStr.startsWith(m));
+        if (monthIdx !== -1) {
+          const parsedD = new Date(currentYear, monthIdx, day, hour, min);
+          if (!isNaN(parsedD.getTime())) return parsedD.getTime();
+        }
+      }
+
+      return null;
+    };
+
+    // 1. TRANSPORTATION EVENTS (typePriority = 0)
     (trip.transportation || []).forEach(tr => {
       const cfg = this.getModeConfig(tr.mode);
-      // Use departure_time as primary, fall back to arrival_time
-      const dateVal = tr.departure_time || tr.arrival_time || trip.start_date || '';
-      const ts = dateVal ? new Date(dateVal).getTime() : null;
+      const dateVal = tr.departure_time || tr.arrival_time || null;
+      const ts = parseTs(dateVal);
+
       events.push({
         id: 'trans-' + tr.id,
         rawDate: dateVal,
         ts,
         type: 'transport',
-        typePriority: 0, // transports come first when dates match
+        typePriority: 0, // 1st Priority on same date/time
         icon: cfg.icon,
-        displayDate: dateVal
-          ? new Date(dateVal).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : 'Flexible',
+        displayDate: dateVal && ts
+          ? new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : 'Flexible / Undated',
         title: tr.carrier_or_name || cfg.label + ' Pass',
         subtitle: (tr.origin || 'Departure') + ' ➔ ' + (tr.destination_name || 'Arrival'),
-        refText: tr.ticket_no ? '🎫 ' + tr.ticket_no : null,
+        refText: tr.ticket_no ? '🎫 Ticket: ' + tr.ticket_no : (tr.pnr_no ? '🔢 PNR: ' + tr.pnr_no : null),
         notes: tr.notes,
         rawTransport: tr,
       });
     });
 
+    // 2. DESTINATIONS AND DEDICATED HOTEL STAYS
     (trip.destinations || []).forEach((stop, idx) => {
-      // Use arrival_date as the primary date for the destination
-      const dateVal = stop.arrival_date || stop.departure_date || trip.start_date || '';
-      const ts = dateVal ? new Date(dateVal).getTime() : null;
+      // Create dedicated Hotel Stay event if stay_name is present
+      if (stop.stay_name) {
+        const stayDate = stop.stay_check_in || stop.arrival_date || null;
+        const stayTs = parseTs(stayDate);
+        events.push({
+          id: 'stay-' + stop.id,
+          rawDate: stayDate,
+          ts: stayTs,
+          type: 'stay',
+          typePriority: 1, // 2nd Priority on same date/time (after transport, before destination visit)
+          icon: '🏨',
+          displayDate: stayDate && stayTs
+            ? new Date(stayTs).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Hotel Check-in',
+          title: stop.stay_name,
+          subtitle: stop.stay_address ? ('📍 ' + stop.stay_address) : ('Location: ' + stop.place_name),
+          refText: stop.stay_booking_ref ? '🎫 Ref: ' + stop.stay_booking_ref : null,
+          notes: stop.stay_notes || null,
+          rawStop: stop,
+        });
+      }
+
+      // Destination Sightseeing Stop event
+      const destDate = stop.arrival_date || stop.departure_date || null;
+      const destTs = parseTs(destDate);
       events.push({
         id: 'stop-' + stop.id,
-        rawDate: dateVal,
-        ts,
+        rawDate: destDate,
+        ts: destTs,
         type: 'destination',
-        typePriority: 1, // destinations come after transports on the same date
+        typePriority: 2, // 3rd Priority on same date/time
         icon: '📍',
-        displayDate: dateVal
-          ? new Date(dateVal).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-          : 'Stop #' + (idx + 1),
+        displayDate: destDate && destTs
+          ? new Date(destTs).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+          : 'Stop #' + (idx + 1) + ' (Undated)',
         title: stop.place_name,
-        subtitle: stop.stay_name ? '🏨 ' + stop.stay_name : '📍 Destination Stop',
-        refText: stop.stay_booking_ref ? '🎫 ' + stop.stay_booking_ref : null,
-        notes: stop.stay_address || null,
+        subtitle: stop.stay_name ? '🏨 Stay: ' + stop.stay_name : '📍 Destination Visit',
+        refText: stop.ticket_price ? ('🎟️ Ticket: ₹' + stop.ticket_price) : null,
+        notes: null,
         checklist: stop.checklist_items || [],
         rawStop: stop,
       });
     });
 
-    // Default chronological sort: date ASC, then transport before destination on same date
+    // STRICT CHRONOLOGICAL SORT:
+    // 1. Undated items (ts === null) go to very end
+    // 2. Earliest timestamp FIRST (Date ASC: 23 Mar -> 26 Mar -> 28 Mar -> 30 Mar -> 31 Aug)
+    // 3. Same timestamp: Transport (0) -> Hotel Stay (1) -> Destination (2)
     events.sort((a, b) => {
-      if (!a.ts && !b.ts) return a.typePriority - b.typePriority;
-      if (!a.ts) return 1;  // undated go to end
-      if (!b.ts) return -1;
-      if (a.ts !== b.ts) return a.ts - b.ts; // chronological
-      return a.typePriority - b.typePriority; // same timestamp: transport first
+      if (a.ts === null && b.ts === null) return a.typePriority - b.typePriority;
+      if (a.ts === null) return 1;
+      if (b.ts === null) return -1;
+      if (a.ts !== b.ts) {
+        return a.ts - b.ts; // Strict Chronological Date Flow
+      }
+      return a.typePriority - b.typePriority; // Transport -> Stay -> Destination
     });
-
-    // Apply manual drag-reorder if user has reordered this trip
-    const manualOrder = this.manualTimelineOrder()[trip.id];
-    if (manualOrder && manualOrder.length === events.length) {
-      const eventMap = new Map(events.map(e => [e.id, e]));
-      const reordered = manualOrder.map(id => eventMap.get(id)).filter(Boolean);
-      if (reordered.length === events.length) return reordered;
-    }
 
     return events;
   });
 
-  generateTimeline(): void { this.viewMode.set('timeline'); this.toast.success('Timeline generated — drag to reorder!'); }
+  generateTimeline(): void {
+    const trip = this.activeTrip();
+    if (trip) {
+      // Clear manual drag order so timeline generates strictly in chronological date order
+      this.manualTimelineOrder.update(prev => {
+        const copy = { ...prev };
+        delete copy[trip.id];
+        return copy;
+      });
+    }
+    this.viewMode.set('timeline');
+    this.toast.success('Timeline generated in strict chronological order!');
+  }
 
   // Drag-and-drop reorder handlers
   onDragStart(eventId: string): void {
@@ -295,7 +495,14 @@ export class TripPlannerComponent implements OnInit {
   selectTrip(trip: Trip): void { this.activeTrip.set(trip); this.viewMode.set('grid'); }
 
   openCreateModal(): void { this.isEditingTrip.set(false); this.newTripTitle.set(''); this.newTripStartDate.set(''); this.newTripEndDate.set(''); this.newTripNotes.set(''); this.showCreateModal.set(true); }
-  openEditTripModal(trip: Trip): void { this.isEditingTrip.set(true); this.newTripTitle.set(trip.title); this.newTripStartDate.set(trip.start_date || ''); this.newTripEndDate.set(trip.end_date || ''); this.newTripNotes.set(trip.notes || ''); this.showCreateModal.set(true); }
+  openEditTripModal(trip: Trip): void {
+    this.isEditingTrip.set(true);
+    this.newTripTitle.set(trip.title);
+    this.newTripStartDate.set(this.formatForDateInput(trip.start_date));
+    this.newTripEndDate.set(this.formatForDateInput(trip.end_date));
+    this.newTripNotes.set(trip.notes || '');
+    this.showCreateModal.set(true);
+  }
 
   async saveTrip(): Promise<void> {
     const user = this.auth.currentUser();
@@ -323,11 +530,16 @@ export class TripPlannerComponent implements OnInit {
     this.transMode.set('plane');
     this.transCarrier.set('');
     this.transTicketNo.set('');
+    this.transPnrNo.set('');
     this.transOrigin.set('');
     this.transDestination.set('');
     this.transDepartureTime.set('');
     this.transArrivalTime.set('');
     this.transNotes.set('');
+    this.transBusNo.set('');
+    this.transAmount.set('');
+    this.transBookingPlatform.set('');
+    this.transBookingPlatformOther.set('');
     this.showDepSuggestions.set(false);
     this.showArrSuggestions.set(false);
     this.showTrainSuggestions.set(false);
@@ -339,11 +551,16 @@ export class TripPlannerComponent implements OnInit {
     this.transMode.set(tr.mode);
     this.transCarrier.set(tr.carrier_or_name || '');
     this.transTicketNo.set(tr.ticket_no || '');
+    this.transPnrNo.set(tr.pnr_no || '');
     this.transOrigin.set(tr.origin || '');
     this.transDestination.set(tr.destination_name || '');
-    this.transDepartureTime.set(tr.departure_time || '');
-    this.transArrivalTime.set(tr.arrival_time || '');
+    this.transDepartureTime.set(this.formatForDateTimeLocalInput(tr.departure_time));
+    this.transArrivalTime.set(this.formatForDateTimeLocalInput(tr.arrival_time));
     this.transNotes.set(tr.notes || '');
+    this.transBusNo.set(tr.bus_no || '');
+    this.transAmount.set(tr.amount || '');
+    this.transBookingPlatform.set(tr.booking_platform || '');
+    this.transBookingPlatformOther.set(tr.booking_platform_other || '');
     this.showDepSuggestions.set(false);
     this.showArrSuggestions.set(false);
     this.showTrainSuggestions.set(false);
@@ -395,14 +612,28 @@ export class TripPlannerComponent implements OnInit {
   async addTransport(): Promise<void> {
     const trip = this.activeTrip();
     if (!trip) return;
-    const payload: Partial<TripTransportation> = { mode: this.transMode(), carrier_or_name: this.transCarrier().trim() || null, ticket_no: this.transTicketNo().trim() || null, origin: this.transOrigin().trim() || null, destination_name: this.transDestination().trim() || null, departure_time: this.transDepartureTime() || null, arrival_time: this.transArrivalTime() || null, notes: this.transNotes().trim() || null };
+    const payload: Partial<TripTransportation> = {
+      mode: this.transMode(),
+      carrier_or_name: this.transCarrier().trim() || null,
+      ticket_no: this.transTicketNo().trim() || null,
+      pnr_no: this.transPnrNo().trim() || null,
+      origin: this.transOrigin().trim() || null,
+      destination_name: this.transDestination().trim() || null,
+      departure_time: this.transDepartureTime() || null,
+      arrival_time: this.transArrivalTime() || null,
+      notes: this.transNotes().trim() || null,
+      bus_no: this.transBusNo().trim() || null,
+      amount: this.transAmount().trim() || null,
+      booking_platform: this.transBookingPlatform() || null,
+      booking_platform_other: this.transBookingPlatform() === 'other' ? (this.transBookingPlatformOther().trim() || null) : null,
+    };
     const editTr = this.editingTransport();
     if (editTr?.id) {
       const { error } = await this.tripService.updateTransportation(trip.id, editTr.id, payload);
-      if (!error) { this.toast.success('Transport updated!'); this.refreshActiveTrip(trip.id); this.showTransportModal.set(false); } else { this.toast.error('Failed.'); }
+      if (!error) { this.toast.success('Transport updated!'); this.refreshActiveTrip(trip.id); this.showTransportModal.set(false); } else { this.toast.error('Failed to update transport.'); }
     } else {
       const { data, error } = await this.tripService.addTransportation(trip.id, payload);
-      if (!error && data) { this.toast.success(this.getModeConfig(this.transMode()).label + ' pass added!'); this.refreshActiveTrip(trip.id); this.showTransportModal.set(false); } else { this.toast.error('Failed.'); }
+      if (!error && data) { this.toast.success(this.getModeConfig(this.transMode()).label + ' pass added!'); this.refreshActiveTrip(trip.id); this.showTransportModal.set(false); } else { this.toast.error('Failed to save transport.'); }
     }
   }
 
@@ -414,7 +645,30 @@ export class TripPlannerComponent implements OnInit {
   }
 
   openStopModal(): void { this.editingStop.set(null); this.stopPlaceName.set(''); this.stopDestinationId.set(''); this.stopArrivalDate.set(''); this.stopDepartureDate.set(''); this.showStopModal.set(true); }
-  openEditStopModal(stop: TripDestination): void { this.editingStop.set(stop); this.stopPlaceName.set(stop.place_name); this.stopDestinationId.set(stop.destination_id || ''); this.stopArrivalDate.set(stop.arrival_date || ''); this.stopDepartureDate.set(stop.departure_date || ''); this.showStopModal.set(true); }
+
+  async toggleDestinationCompleted(stop: TripDestination): Promise<void> {
+    const trip = this.activeTrip();
+    if (!trip || !stop.id) return;
+    const newState = !stop.is_completed;
+    const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, {
+      is_completed: newState
+    });
+
+    if (!error) {
+      this.toast.success(newState ? `Marked ${stop.place_name} as Visited! 🎉` : `Unmarked ${stop.place_name}`);
+      this.refreshActiveTrip(trip.id);
+    } else {
+      this.toast.error('Failed to update destination status.');
+    }
+  }
+  openEditStopModal(stop: TripDestination): void {
+    this.editingStop.set(stop);
+    this.stopPlaceName.set(stop.place_name);
+    this.stopDestinationId.set(stop.destination_id || '');
+    this.stopArrivalDate.set(this.formatForDateInput(stop.arrival_date));
+    this.stopDepartureDate.set(this.formatForDateInput(stop.departure_date));
+    this.showStopModal.set(true);
+  }
 
   onDestinationSelect(destId: string): void {
     this.stopDestinationId.set(destId);
@@ -443,13 +697,77 @@ export class TripPlannerComponent implements OnInit {
     if (!error) { this.toast.info('Removed ' + placeName + '.'); this.refreshActiveTrip(trip.id); }
   }
 
-  openStayModal(stop: TripDestination): void { this.stayForStop.set(stop); this.stayName.set(stop.stay_name || ''); this.stayAddress.set(stop.stay_address || ''); this.stayBookingRef.set(stop.stay_booking_ref || ''); this.stayBookingPlatform.set(stop.stay_booking_platform || ''); this.stayCheckIn.set(stop.stay_check_in || ''); this.stayCheckOut.set(stop.stay_check_out || ''); this.showStayModal.set(true); }
+  openAddStayModal(): void {
+    const trip = this.activeTrip();
+    if (!trip?.destinations || trip.destinations.length === 0) {
+      this.toast.info('Please add a destination stop first!');
+      this.openStopModal();
+      return;
+    }
+    const targetStop = trip.destinations.find(d => !d.stay_name) || trip.destinations[0];
+    this.openStayModal(targetStop);
+  }
+
+  openStayModal(stop: TripDestination): void {
+    this.stayForStop.set(stop);
+    this.stayOriginalStopId.set(stop.id || null);
+    this.stayName.set(stop.stay_name || '');
+    this.stayAddress.set(stop.stay_address || '');
+    this.stayBookingRef.set(stop.stay_booking_ref || '');
+    this.stayBookingPlatform.set(stop.stay_booking_platform || '');
+    this.stayBookingPlatformOther.set(stop.stay_booking_platform_other || '');
+    this.stayCheckIn.set(this.formatForDateTimeLocalInput(stop.stay_check_in));
+    this.stayCheckOut.set(this.formatForDateTimeLocalInput(stop.stay_check_out));
+    this.stayRate.set(stop.stay_rate || '');
+    this.stayStatus.set((stop.stay_status as any) || '');
+    this.stayRefundStatus.set((stop.stay_refund_status as any) || '');
+    this.stayContact.set(stop.stay_contact || '');
+    this.stayRoomType.set(stop.stay_room_type || '');
+    this.stayNotes.set(stop.stay_notes || '');
+    this.showStayModal.set(true);
+  }
+
+  onStayStopSelect(stopId: string): void {
+    const trip = this.activeTrip();
+    if (!trip?.destinations) return;
+    const found = trip.destinations.find(d => d.id === stopId);
+    if (found) {
+      // Re-link stay to the selected destination stop WITHOUT overwriting form fields!
+      this.stayForStop.set(found);
+    }
+  }
 
   async saveStay(): Promise<void> {
     const trip = this.activeTrip();
     const stop = this.stayForStop();
     if (!trip || !stop?.id) return;
-    const payload: Partial<TripDestination> = { stay_name: this.stayName().trim() || null, stay_address: this.stayAddress().trim() || null, stay_booking_ref: this.stayBookingRef().trim() || null, stay_booking_platform: this.stayBookingPlatform() || null, stay_check_in: this.stayCheckIn() || null, stay_check_out: this.stayCheckOut() || null };
+
+    const originalStopId = this.stayOriginalStopId();
+    // If stay was moved to a different destination stop, clear stay details from the original stop first
+    if (originalStopId && originalStopId !== stop.id) {
+      await this.tripService.updateTripDestination(trip.id, originalStopId, {
+        stay_name: null, stay_address: null, stay_booking_ref: null, stay_booking_platform: null,
+        stay_booking_platform_other: null, stay_check_in: null, stay_check_out: null,
+        stay_rate: null, stay_status: null, stay_refund_status: null,
+        stay_contact: null, stay_room_type: null, stay_notes: null,
+      });
+    }
+
+    const payload: Partial<TripDestination> = {
+      stay_name: this.stayName().trim() || null,
+      stay_address: this.stayAddress().trim() || null,
+      stay_booking_ref: this.stayBookingRef().trim() || null,
+      stay_booking_platform: this.stayBookingPlatform() || null,
+      stay_booking_platform_other: this.stayBookingPlatform() === 'other' ? (this.stayBookingPlatformOther().trim() || null) : null,
+      stay_check_in: this.stayCheckIn() || null,
+      stay_check_out: this.stayCheckOut() || null,
+      stay_rate: this.stayRate().trim() || null,
+      stay_status: (this.stayStatus() as any) || null,
+      stay_refund_status: this.stayStatus() === 'cancelled' ? ((this.stayRefundStatus() as any) || null) : null,
+      stay_contact: this.stayContact().trim() || null,
+      stay_room_type: this.stayRoomType().trim() || null,
+      stay_notes: this.stayNotes().trim() || null,
+    };
     const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, payload);
     if (!error) { this.toast.success('Stay details saved!'); this.refreshActiveTrip(trip.id); this.showStayModal.set(false); } else { this.toast.error('Failed to save stay.'); }
   }
@@ -457,7 +775,12 @@ export class TripPlannerComponent implements OnInit {
   async removeStay(stop: TripDestination): Promise<void> {
     const trip = this.activeTrip();
     if (!trip || !stop?.id) return;
-    const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, { stay_name: null, stay_address: null, stay_booking_ref: null, stay_booking_platform: null, stay_check_in: null, stay_check_out: null });
+    const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, {
+      stay_name: null, stay_address: null, stay_booking_ref: null, stay_booking_platform: null,
+      stay_booking_platform_other: null, stay_check_in: null, stay_check_out: null,
+      stay_rate: null, stay_status: null, stay_refund_status: null,
+      stay_contact: null, stay_room_type: null, stay_notes: null,
+    });
     if (!error) { this.toast.info('Stay removed.'); this.refreshActiveTrip(trip.id); }
   }
 
@@ -532,13 +855,96 @@ export class TripPlannerComponent implements OnInit {
 
   getPlatformLabel(val: string): string { return BOOKING_PLATFORMS.find(p => p.value === val)?.label || val; }
   getPlatformIcon(val: string): string { return BOOKING_PLATFORMS.find(p => p.value === val)?.icon || '🏠'; }
+  getTransPlatformLabel(val: string): string { return TRANSPORT_BOOKING_PLATFORMS.find(p => p.value === val)?.label || BOOKING_PLATFORMS.find(p => p.value === val)?.label || val; }
+  getTransPlatformIcon(val: string): string { return TRANSPORT_BOOKING_PLATFORMS.find(p => p.value === val)?.icon || BOOKING_PLATFORMS.find(p => p.value === val)?.icon || '🌐'; }
   getModeConfig(mode: TransportationMode) { return TRANSPORT_MODES.find(m => m.value === mode) || { label: mode, icon: '✈️' }; }
+
+  /** Helper to format any date string into YYYY-MM-DD for HTML <input type="date"> */
+  formatForDateInput(val: string | null | undefined): string {
+    if (!val) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return val.substring(0, 10);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return val.substring(0, 10);
+    }
+  }
+
+  /** Helper to format any date/timestamp ISO string into YYYY-MM-DDTHH:mm for HTML <input type="datetime-local"> */
+  formatForDateTimeLocalInput(val: string | null | undefined): string {
+    if (!val) return '';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) {
+        return val.replace(' ', 'T').substring(0, 16);
+      }
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+      return val.replace(' ', 'T').substring(0, 16);
+    }
+  }
+
+  /** Compute human-readable duration between two datetime-local strings */
+  getDormitoryDuration(checkIn: string | null | undefined, checkOut: string | null | undefined): string {
+    if (!checkIn || !checkOut) return '';
+    const diffMs = new Date(checkOut).getTime() - new Date(checkIn).getTime();
+    if (isNaN(diffMs) || diffMs <= 0) return '';
+    const hrs = Math.floor(diffMs / 3600000);
+    const mins = Math.floor((diffMs % 3600000) / 60000);
+    if (mins === 0) return `${hrs} hrs`;
+    return `${hrs} hrs ${mins} mins`;
+  }
 
   getCompletedCount(stop: TripDestination): number { return this.getTasksOnly(stop.checklist_items).filter(i => i.is_completed).length; }
 
   private refreshActiveTrip(tripId: string): void {
     const updated = this.tripService.trips().find(t => t.id === tripId);
     if (updated) this.activeTrip.set(updated);
+  }
+
+  scrollToSection(sectionId: string): void {
+    // If in timeline view, switch back to grid so sections are visible
+    if (this.viewMode() === 'timeline') {
+      this.viewMode.set('grid');
+    }
+    // Use a tiny timeout to allow grid to render before scrolling
+    setTimeout(() => {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Brief highlight flash
+        el.classList.add('section-highlight');
+        setTimeout(() => el.classList.remove('section-highlight'), 900);
+      }
+    }, 80);
+  }
+
+  scrollToElement(elementId: string): void {
+    if (this.viewMode() === 'timeline') {
+      this.viewMode.set('grid');
+    }
+    if (elementId.startsWith('stop-card-')) {
+      const stopId = elementId.replace('stop-card-', '');
+      this.expandedStops.update(prev => new Set(prev).add(stopId));
+    }
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('card-highlight');
+        setTimeout(() => el.classList.remove('card-highlight'), 1200);
+      }
+    }, 80);
   }
 }
 

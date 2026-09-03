@@ -166,7 +166,7 @@ export const STATUS_CONFIG: Record<BucketListStatus, { label: string; icon: stri
 };
 
 // TRIP PLANNER MODELS
-export type TransportationMode = 'plane' | 'train' | 'bus' | 'car' | 'ship' | 'bike';
+export type TransportationMode = 'plane' | 'train' | 'bus' | 'car' | 'ship' | 'bike' | 'irctc_dormitory';
 
 export interface TripTransportation {
   id?: string;
@@ -174,11 +174,16 @@ export interface TripTransportation {
   mode: TransportationMode;
   carrier_or_name?: string | null;
   ticket_no?: string | null;
+  pnr_no?: string | null;
   departure_time?: string | null;
   arrival_time?: string | null;
   origin?: string | null;
   destination_name?: string | null;
   notes?: string | null;
+  bus_no?: string | null;
+  amount?: string | null;
+  booking_platform?: string | null;
+  booking_platform_other?: string | null;
   created_at?: string;
 }
 
@@ -195,12 +200,21 @@ export interface TripDestination {
   place_name: string;
   arrival_date?: string | null;
   departure_date?: string | null;
+  // Stay / Hotel fields
   stay_name?: string | null;
   stay_address?: string | null;
   stay_booking_ref?: string | null;
   stay_booking_platform?: string | null;
-  stay_check_in?: string | null;
-  stay_check_out?: string | null;
+  stay_booking_platform_other?: string | null;  // freetext when platform = 'other'
+  stay_check_in?: string | null;                 // datetime-local string
+  stay_check_out?: string | null;                // datetime-local string
+  stay_rate?: string | null;                     // e.g. ₹3500/night
+  stay_status?: 'confirmed' | 'cancelled' | null;
+  stay_refund_status?: 'complete' | 'pending' | null; // only if cancelled
+  stay_contact?: string | null;                  // phone/email of property
+  stay_room_type?: string | null;                // e.g. Deluxe Double, Dormitory 4-bed
+  stay_notes?: string | null;                    // personal reminder notes
+  // Entry ticket fields
   ticket_required?: boolean | null;
   ticket_booking_url?: string | null;
   ticket_booking_ref?: string | null;
@@ -208,6 +222,7 @@ export interface TripDestination {
   ticket_timing_notes?: string | null;
   checklist_items?: TripChecklistItem[];
   order_index?: number;
+  is_completed?: boolean;
   created_at?: string;
   destination?: Destination;
 }
@@ -232,4 +247,5 @@ export const TRANSPORT_MODES: { value: TransportationMode; label: string; icon: 
   { value: 'car', label: 'Car / Road Trip', icon: '🚗' },
   { value: 'ship', label: 'Ship / Cruise / Ferry', icon: '🚢' },
   { value: 'bike', label: 'Motorbike / Bicycle', icon: '🏍️' },
+  { value: 'irctc_dormitory', label: 'IRCTC Dormitory', icon: '🛏️' },
 ];

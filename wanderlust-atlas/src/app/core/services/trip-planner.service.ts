@@ -12,17 +12,27 @@ function unpackDestinationMeta(d: TripDestination): TripDestination {
   const items = d.checklist_items || [];
   const ticketMeta = items.find((i: any) => i.id === '__meta_ticket__') as any;
   const stayMeta = items.find((i: any) => i.id === '__meta_stay__') as any;
+  const statusMeta = items.find((i: any) => i.id === '__meta_dest_status__') as any;
 
   return {
     ...d,
+    is_completed: statusMeta?.is_completed ?? d.is_completed ?? false,
     ticket_required: ticketMeta?.ticket_required ?? d.ticket_required ?? null,
     ticket_booking_url: ticketMeta?.ticket_booking_url ?? d.ticket_booking_url ?? null,
     ticket_booking_ref: ticketMeta?.ticket_booking_ref ?? d.ticket_booking_ref ?? null,
     ticket_price: ticketMeta?.ticket_price ?? d.ticket_price ?? null,
     ticket_timing_notes: ticketMeta?.ticket_timing_notes ?? d.ticket_timing_notes ?? null,
+
     stay_booking_platform: stayMeta?.stay_booking_platform ?? d.stay_booking_platform ?? null,
+    stay_booking_platform_other: stayMeta?.stay_booking_platform_other ?? d.stay_booking_platform_other ?? null,
     stay_check_in: stayMeta?.stay_check_in ?? d.stay_check_in ?? null,
     stay_check_out: stayMeta?.stay_check_out ?? d.stay_check_out ?? null,
+    stay_rate: stayMeta?.stay_rate ?? d.stay_rate ?? null,
+    stay_status: stayMeta?.stay_status ?? d.stay_status ?? null,
+    stay_refund_status: stayMeta?.stay_refund_status ?? d.stay_refund_status ?? null,
+    stay_contact: stayMeta?.stay_contact ?? d.stay_contact ?? null,
+    stay_room_type: stayMeta?.stay_room_type ?? d.stay_room_type ?? null,
+    stay_notes: stayMeta?.stay_notes ?? d.stay_notes ?? null,
   };
 }
 
@@ -42,11 +52,11 @@ function packDestinationUpdates(
     updates.ticket_timing_notes !== undefined
   ) {
     items = items.filter((i: any) => i.id !== '__meta_ticket__');
-    const req = updates.ticket_required ?? currentDestination?.ticket_required ?? null;
-    const url = updates.ticket_booking_url ?? currentDestination?.ticket_booking_url ?? null;
-    const ref = updates.ticket_booking_ref ?? currentDestination?.ticket_booking_ref ?? null;
-    const price = updates.ticket_price ?? currentDestination?.ticket_price ?? null;
-    const notes = updates.ticket_timing_notes ?? currentDestination?.ticket_timing_notes ?? null;
+    const req = updates.ticket_required !== undefined ? updates.ticket_required : (currentDestination?.ticket_required ?? null);
+    const url = updates.ticket_booking_url !== undefined ? updates.ticket_booking_url : (currentDestination?.ticket_booking_url ?? null);
+    const ref = updates.ticket_booking_ref !== undefined ? updates.ticket_booking_ref : (currentDestination?.ticket_booking_ref ?? null);
+    const price = updates.ticket_price !== undefined ? updates.ticket_price : (currentDestination?.ticket_price ?? null);
+    const notes = updates.ticket_timing_notes !== undefined ? updates.ticket_timing_notes : (currentDestination?.ticket_timing_notes ?? null);
 
     if (req || url || ref || price || notes) {
       items.push({
@@ -65,24 +75,55 @@ function packDestinationUpdates(
   // Pack stay meta if any stay fields updated or present
   if (
     updates.stay_booking_platform !== undefined ||
+    updates.stay_booking_platform_other !== undefined ||
     updates.stay_check_in !== undefined ||
-    updates.stay_check_out !== undefined
+    updates.stay_check_out !== undefined ||
+    updates.stay_rate !== undefined ||
+    updates.stay_status !== undefined ||
+    updates.stay_refund_status !== undefined ||
+    updates.stay_contact !== undefined ||
+    updates.stay_room_type !== undefined ||
+    updates.stay_notes !== undefined
   ) {
     items = items.filter((i: any) => i.id !== '__meta_stay__');
-    const platform = updates.stay_booking_platform ?? currentDestination?.stay_booking_platform ?? null;
-    const checkIn = updates.stay_check_in ?? currentDestination?.stay_check_in ?? null;
-    const checkOut = updates.stay_check_out ?? currentDestination?.stay_check_out ?? null;
+    const platform = updates.stay_booking_platform !== undefined ? updates.stay_booking_platform : (currentDestination?.stay_booking_platform ?? null);
+    const platformOther = updates.stay_booking_platform_other !== undefined ? updates.stay_booking_platform_other : (currentDestination?.stay_booking_platform_other ?? null);
+    const checkIn = updates.stay_check_in !== undefined ? updates.stay_check_in : (currentDestination?.stay_check_in ?? null);
+    const checkOut = updates.stay_check_out !== undefined ? updates.stay_check_out : (currentDestination?.stay_check_out ?? null);
+    const rate = updates.stay_rate !== undefined ? updates.stay_rate : (currentDestination?.stay_rate ?? null);
+    const status = updates.stay_status !== undefined ? updates.stay_status : (currentDestination?.stay_status ?? null);
+    const refundStatus = updates.stay_refund_status !== undefined ? updates.stay_refund_status : (currentDestination?.stay_refund_status ?? null);
+    const contact = updates.stay_contact !== undefined ? updates.stay_contact : (currentDestination?.stay_contact ?? null);
+    const roomType = updates.stay_room_type !== undefined ? updates.stay_room_type : (currentDestination?.stay_room_type ?? null);
+    const notes = updates.stay_notes !== undefined ? updates.stay_notes : (currentDestination?.stay_notes ?? null);
 
-    if (platform || checkIn || checkOut) {
+    if (platform || platformOther || checkIn || checkOut || rate || status || refundStatus || contact || roomType || notes) {
       items.push({
         id: '__meta_stay__',
         title: '__meta_stay__',
         is_completed: false,
         stay_booking_platform: platform,
+        stay_booking_platform_other: platformOther,
         stay_check_in: checkIn,
         stay_check_out: checkOut,
+        stay_rate: rate,
+        stay_status: status,
+        stay_refund_status: refundStatus,
+        stay_contact: contact,
+        stay_room_type: roomType,
+        stay_notes: notes,
       } as any);
     }
+  }
+
+  // Pack destination completion status if present
+  if (updates.is_completed !== undefined) {
+    items = items.filter((i: any) => i.id !== '__meta_dest_status__');
+    items.push({
+      id: '__meta_dest_status__',
+      title: '__meta_dest_status__',
+      is_completed: !!updates.is_completed,
+    } as any);
   }
 
   const mergedPayload: Record<string, any> = {
@@ -90,7 +131,7 @@ function packDestinationUpdates(
     checklist_items: items,
   };
 
-  // Strip non-column keys from DB payload
+  // Include direct columns + packed checklist items
   const cleanPayload: Record<string, any> = {};
   for (const key of Object.keys(mergedPayload)) {
     if (VALID_DEST_COLUMNS.has(key)) {
@@ -99,6 +140,48 @@ function packDestinationUpdates(
   }
 
   return cleanPayload;
+}
+
+export function unpackTransportationMeta(tr: TripTransportation): TripTransportation {
+  if (!tr.notes) return tr;
+  if (tr.notes.startsWith('{') && tr.notes.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(tr.notes);
+      return {
+        ...tr,
+        notes: parsed.user_notes || null,
+        pnr_no: parsed.pnr_no || tr.pnr_no || null,
+        bus_no: parsed.bus_no || tr.bus_no || null,
+        amount: parsed.amount || tr.amount || null,
+        booking_platform: parsed.booking_platform || tr.booking_platform || null,
+        booking_platform_other: parsed.booking_platform_other || tr.booking_platform_other || null,
+      };
+    } catch {
+      return tr;
+    }
+  }
+  return tr;
+}
+
+function packTransportationPayload(item: Partial<TripTransportation>): Record<string, any> {
+  const { pnr_no, bus_no, amount, booking_platform, booking_platform_other, notes, ...rest } = item;
+  let notesValue = notes || null;
+
+  if (pnr_no || bus_no || amount || booking_platform || booking_platform_other) {
+    notesValue = JSON.stringify({
+      user_notes: notes || null,
+      pnr_no: pnr_no || null,
+      bus_no: bus_no || null,
+      amount: amount || null,
+      booking_platform: booking_platform || null,
+      booking_platform_other: booking_platform_other || null,
+    });
+  }
+
+  return {
+    ...rest,
+    notes: notesValue,
+  };
 }
 
 @Injectable({
@@ -132,7 +215,7 @@ export class TripPlannerService {
         // Unpack meta fields and sort destinations by order_index
         const formattedTrips = (data as Trip[]).map(t => ({
           ...t,
-          transportation: t.transportation || [],
+          transportation: (t.transportation || []).map(tr => unpackTransportationMeta(tr)),
           destinations: (t.destinations || [])
             .map(d => unpackDestinationMeta(d))
             .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
@@ -192,33 +275,36 @@ export class TripPlannerService {
 
   // Transportation CRUD
   async addTransportation(tripId: string, item: Partial<TripTransportation>): Promise<{ data: TripTransportation | null; error: any }> {
-    const payload = { ...item, trip_id: tripId };
+    const cleanPayload = packTransportationPayload(item);
     const { data, error } = await this.supabase.client
       .from('trip_transportation')
-      .insert(payload)
+      .insert({ ...cleanPayload, trip_id: tripId })
       .select()
       .single();
 
     if (!error && data) {
+      const unpacked = unpackTransportationMeta({ ...(data as TripTransportation), ...item });
       this._trips.update(trips =>
-        trips.map(t => t.id === tripId ? { ...t, transportation: [...(t.transportation || []), data as TripTransportation] } : t)
+        trips.map(t => t.id === tripId ? { ...t, transportation: [...(t.transportation || []), unpacked] } : t)
       );
-      return { data: data as TripTransportation, error: null };
+      return { data: unpacked, error: null };
     }
     return { data: null, error };
   }
 
   async updateTransportation(tripId: string, transportId: string, updates: Partial<TripTransportation>): Promise<{ error: any }> {
+    const cleanPayload = packTransportationPayload(updates);
     const { error } = await this.supabase.client
       .from('trip_transportation')
-      .update(updates)
+      .update(cleanPayload)
       .eq('id', transportId);
 
     if (!error) {
+      const unpackedUpdates = unpackTransportationMeta({ ...updates, notes: cleanPayload['notes'] } as TripTransportation);
       this._trips.update(trips =>
         trips.map(t => t.id === tripId ? {
           ...t,
-          transportation: (t.transportation || []).map(tr => tr.id === transportId ? { ...tr, ...updates } : tr)
+          transportation: (t.transportation || []).map(tr => tr.id === transportId ? { ...tr, ...unpackedUpdates } : tr)
         } : t)
       );
     }

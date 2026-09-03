@@ -15,11 +15,14 @@ CREATE TABLE IF NOT EXISTS public.trips (
 );
 
 -- 2. TRIP TRANSPORTATION TABLE
+-- mode includes: 'plane', 'train', 'bus', 'car', 'ship', 'bike', 'irctc_dormitory'
+-- For irctc_dormitory: carrier_or_name = room type, ticket_no = PNR, origin = station,
+-- departure_time = check-in, arrival_time = check-out, destination_name = amount paid
 CREATE TABLE IF NOT EXISTS public.trip_transportation (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id         UUID NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
-  mode            TEXT NOT NULL DEFAULT 'plane', -- 'plane', 'train', 'bus', 'car', 'ship', 'bike'
-  carrier_or_name TEXT, -- e.g. "Emirates EK202" or "Vande Bharat Express"
+  mode            TEXT NOT NULL DEFAULT 'plane', -- 'plane', 'train', 'bus', 'car', 'ship', 'bike', 'irctc_dormitory'
+  carrier_or_name TEXT, -- e.g. "Emirates EK202" or "Vande Bharat Express" or "AC Dormitory 4-Bed"
   ticket_no       TEXT, -- e.g. "PNR #849204"
   departure_time  TIMESTAMPTZ,
   arrival_time    TIMESTAMPTZ,
@@ -44,6 +47,35 @@ CREATE TABLE IF NOT EXISTS public.trip_destinations (
   order_index     INT DEFAULT 0,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ==========================================
+-- MIGRATION: Add expanded Stay, Ticket, & Transport fields
+-- Run this in your Supabase SQL Editor if you want native Postgres columns
+-- ==========================================
+ALTER TABLE public.trip_destinations
+  ADD COLUMN IF NOT EXISTS stay_booking_platform        TEXT,
+  ADD COLUMN IF NOT EXISTS stay_booking_platform_other  TEXT,
+  ADD COLUMN IF NOT EXISTS stay_check_in                TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS stay_check_out               TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS stay_rate                    TEXT,
+  ADD COLUMN IF NOT EXISTS stay_status                  TEXT,           -- 'confirmed' | 'cancelled'
+  ADD COLUMN IF NOT EXISTS stay_refund_status           TEXT,           -- 'complete' | 'pending'
+  ADD COLUMN IF NOT EXISTS stay_contact                 TEXT,
+  ADD COLUMN IF NOT EXISTS stay_room_type               TEXT,
+  ADD COLUMN IF NOT EXISTS stay_notes                   TEXT,
+  ADD COLUMN IF NOT EXISTS ticket_required              BOOLEAN,
+  ADD COLUMN IF NOT EXISTS ticket_booking_url           TEXT,
+  ADD COLUMN IF NOT EXISTS ticket_booking_ref           TEXT,
+  ADD COLUMN IF NOT EXISTS ticket_price                 TEXT,
+  ADD COLUMN IF NOT EXISTS ticket_timing_notes          TEXT,
+  ADD COLUMN IF NOT EXISTS is_completed                 BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE public.trip_transportation
+  ADD COLUMN IF NOT EXISTS bus_no                       TEXT,
+  ADD COLUMN IF NOT EXISTS pnr_no                       TEXT,
+  ADD COLUMN IF NOT EXISTS amount                       TEXT,
+  ADD COLUMN IF NOT EXISTS booking_platform             TEXT,
+  ADD COLUMN IF NOT EXISTS booking_platform_other       TEXT;
 
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
