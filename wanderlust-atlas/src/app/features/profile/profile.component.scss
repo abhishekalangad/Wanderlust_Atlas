@@ -606,6 +606,31 @@
 @media (max-width: 600px) {
   .profile-page { padding-top: 80px; }
   .container { padding: 0 16px; }
+  .profile-stats {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    width: 100%;
+    padding: 12px 0;
+
+    .stat-card {
+      padding: 14px 8px;
+      min-width: 0;
+      width: 100%;
+
+      .stat-num {
+        font-size: 1.6rem;
+      }
+
+      .stat-lbl {
+        font-size: 0.65rem;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
   .bucket-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

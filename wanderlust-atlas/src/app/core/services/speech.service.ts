@@ -3,7 +3,9 @@ import { Injectable, signal, OnDestroy } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class SpeechService implements OnDestroy {
   private synth: SpeechSynthesis | null = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private chunks: string[] = [];
+  private currentChunkIndex = 0;
+  private activeUtterance: SpeechSynthesisUtterance | null = null;
 
   readonly isPlaying = signal<boolean>(false);
   readonly isPaused = signal<boolean>(false);
@@ -19,52 +21,70 @@ export class SpeechService implements OnDestroy {
   speak(text: string, title?: string): void {
     if (!this.synth) return;
 
-    // Stop any active speech
-    this.stop();
+    // Reset current playback state
+    this.stopQuietly();
 
     const formattedContent = this.formatStoryForReading(text, title);
     if (!formattedContent.trim()) return;
 
-    const utterance = new SpeechSynthesisUtterance(formattedContent);
-    utterance.lang = 'en-US';
-    
-    // Clear, youthful & realistic tone settings
-    utterance.rate = 0.93;  // Articulate, clear narrator pace
-    utterance.pitch = 1.15; // Bright, youthful, realistic female voice pitch
+    // Split text into small sentence chunks (under 180 chars) for 100% mobile compatibility
+    this.chunks = this.splitIntoChunks(formattedContent);
+    this.currentChunkIndex = 0;
 
-    // Select young female narrator voice across browsers/OS
-    const voices = this.synth.getVoices();
-    const femaleVoice = this.getFemaleVoice(voices);
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
-    }
+    if (this.chunks.length === 0) return;
 
-    utterance.onstart = () => {
-      this.isPlaying.set(true);
-      this.isPaused.set(false);
-    };
+    this.isPlaying.set(true);
+    this.isPaused.set(false);
 
-    utterance.onend = () => {
+    this.speakNextChunk();
+  }
+
+  private speakNextChunk(): void {
+    if (!this.synth || !this.isPlaying() || this.currentChunkIndex >= this.chunks.length) {
       this.isPlaying.set(false);
       this.isPaused.set(false);
-      this.currentUtterance = null;
+      this.activeUtterance = null;
+      return;
+    }
+
+    const chunkText = this.chunks[this.currentChunkIndex];
+    const utterance = new SpeechSynthesisUtterance(chunkText);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.93;
+    utterance.pitch = 1.12;
+
+    const voices = this.synth.getVoices();
+    if (voices.length > 0) {
+      const femaleVoice = this.getFemaleVoice(voices);
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
+    }
+
+    utterance.onend = () => {
+      this.currentChunkIndex++;
+      if (this.isPlaying() && !this.isPaused()) {
+        this.speakNextChunk();
+      }
     };
 
     utterance.onerror = (e) => {
-      console.warn('SpeechSynthesis error:', e);
-      this.isPlaying.set(false);
-      this.isPaused.set(false);
-      this.currentUtterance = null;
+      console.warn('SpeechSynthesis chunk error:', e);
+      this.currentChunkIndex++;
+      if (this.isPlaying() && !this.isPaused()) {
+        this.speakNextChunk();
+      } else {
+        this.isPlaying.set(false);
+        this.isPaused.set(false);
+        this.activeUtterance = null;
+      }
     };
 
-    this.currentUtterance = utterance;
-
-    // Chrome audio context resume fix
+    this.activeUtterance = utterance;
     if (this.synth.paused) {
       this.synth.resume();
     }
     this.synth.speak(utterance);
-    this.synth.resume();
   }
 
   pause(): void {
@@ -82,12 +102,20 @@ export class SpeechService implements OnDestroy {
   }
 
   stop(): void {
+    this.stopQuietly();
+    this.isPlaying.set(false);
+    this.isPaused.set(false);
+  }
+
+  private stopQuietly(): void {
     if (this.synth) {
-      this.synth.cancel();
-      this.isPlaying.set(false);
-      this.isPaused.set(false);
-      this.currentUtterance = null;
+      try {
+        this.synth.cancel();
+      } catch (e) {}
     }
+    this.chunks = [];
+    this.currentChunkIndex = 0;
+    this.activeUtterance = null;
   }
 
   toggle(text: string, title?: string): void {
@@ -100,10 +128,34 @@ export class SpeechService implements OnDestroy {
     }
   }
 
+  private splitIntoChunks(text: string): string[] {
+    // Split on sentence boundaries, preserving punctuation
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const result: string[] = [];
+
+    for (const sentence of sentences) {
+      if (sentence.length <= 180) {
+        result.push(sentence.trim());
+      } else {
+        // Split longer sentences by commas or spaces
+        const subParts = sentence.split(/,\s+/);
+        let temp = '';
+        for (const part of subParts) {
+          if ((temp + part).length > 180) {
+            if (temp) result.push(temp.trim());
+            temp = part + ', ';
+          } else {
+            temp += part + ', ';
+          }
+        }
+        if (temp.trim()) result.push(temp.trim());
+      }
+    }
+    return result.filter(c => c.length > 0);
+  }
+
   private getFemaleVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
     const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-    
-    // Priority order for young, realistic female voices (Edge Natural, Chrome, Safari, Windows, Android)
     const femaleTokens = [
       'ava (natural)', 'jenny (natural)', 'aria (natural)', 'emma (natural)', 'ana (natural)',
       'ava', 'jenny', 'aria', 'emma', 'samantha', 'zira', 'karen', 'victoria', 
@@ -119,15 +171,8 @@ export class SpeechService implements OnDestroy {
   }
 
   private formatStoryForReading(text: string, title?: string): string {
-    const raw = title ? `${title}. ... ${this.stripHtml(text)}` : this.stripHtml(text);
-    
-    // Expressive storytelling pauses after punctuation marks and paragraphs
-    return raw
-      .replace(/([.!?])\s+/g, '$1 ... ')
-      .replace(/,\s+/g, ', .. ')
-      .replace(/\n+/g, ' ... ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const raw = title ? `${title}. ${this.stripHtml(text)}` : this.stripHtml(text);
+    return raw.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   private stripHtml(html: string): string {

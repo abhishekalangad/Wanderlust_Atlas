@@ -214,6 +214,7 @@ export interface TripDestination {
   stay_contact?: string | null;                  // phone/email of property
   stay_room_type?: string | null;                // e.g. Deluxe Double, Dormitory 4-bed
   stay_notes?: string | null;                    // personal reminder notes
+  stay_duration?: string | null;                 // e.g. 6 Hours, 12 Hours, 24 Hours, or custom text
   // Entry ticket fields
   ticket_required?: boolean | null;
   ticket_booking_url?: string | null;

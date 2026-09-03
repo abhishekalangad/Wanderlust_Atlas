@@ -17,6 +17,7 @@ export const BOOKING_PLATFORMS = [
   { value: 'hotels', label: 'Hotels.com', icon: '🏨' },
   { value: 'makemytrip', label: 'MakeMyTrip', icon: '🔴' },
   { value: 'goibibo', label: 'Goibibo', icon: '🟢' },
+  { value: 'irctc_dormitory', label: 'IRCTC Dormitory / Retiring Room', icon: '🚉' },
   { value: 'oyo', label: 'OYO Rooms', icon: '🔶' },
   { value: 'agoda', label: 'Agoda', icon: '🟤' },
   { value: 'expedia', label: 'Expedia', icon: '🔷' },
@@ -122,6 +123,15 @@ export class TripPlannerComponent implements OnInit {
   stayContact = signal<string>('');
   stayRoomType = signal<string>('');
   stayNotes = signal<string>('');
+  stayDuration = signal<string>('');
+  stayDurationPreset = signal<string>('');
+
+  onStayDurationPresetSelect(preset: string): void {
+    this.stayDurationPreset.set(preset);
+    if (preset !== 'custom') {
+      this.stayDuration.set(preset);
+    }
+  }
 
   // Entry Ticket form signals
   ticketRequired = signal<boolean>(false);
@@ -133,11 +143,58 @@ export class TripPlannerComponent implements OnInit {
   newSpotChecklistInput = signal<Record<string, string>>({});
 
   getTasksOnly(items?: TripChecklistItem[]): TripChecklistItem[] {
-    return (items || []).filter(i => !i.id.startsWith('__meta_'));
+    return (items || []).filter(i => i && i.id && !i.id.includes('__meta_') && !(i.title || '').includes('__meta_'));
   }
 
   expandedStops = signal<Set<string>>(new Set());
   expandedTimelineItems = signal<Set<string>>(new Set());
+  expandedGridTransports = signal<Set<string>>(new Set());
+  expandedGridStays = signal<Set<string>>(new Set());
+
+  toggleGridTransportExpanded(transId: string): void {
+    this.expandedGridTransports.update(prev => {
+      const next = new Set(prev);
+      if (next.has(transId)) next.delete(transId);
+      else next.add(transId);
+      return next;
+    });
+  }
+
+  isGridTransportExpanded(transId: string): boolean {
+    return this.expandedGridTransports().has(transId);
+  }
+
+  toggleGridStayExpanded(stayId?: string): void {
+    if (!stayId) return;
+    this.expandedGridStays.update(prev => {
+      const next = new Set(prev);
+      if (next.has(stayId)) next.delete(stayId);
+      else next.add(stayId);
+      return next;
+    });
+  }
+
+  isGridStayExpanded(stayId?: string): boolean {
+    return stayId ? this.expandedGridStays().has(stayId) : false;
+  }
+
+  getDepIcon(mode?: string): string {
+    if (mode === 'flight') return '🛫';
+    if (mode === 'train' || mode === 'irctc_dormitory') return '🚆';
+    if (mode === 'bus') return '🚌';
+    if (mode === 'car' || mode === 'cab') return '🚗';
+    if (mode === 'ferry') return '🚢';
+    return '🟢';
+  }
+
+  getArrIcon(mode?: string): string {
+    if (mode === 'flight') return '🛬';
+    if (mode === 'train' || mode === 'irctc_dormitory') return '🏁';
+    if (mode === 'bus') return '🚏';
+    if (mode === 'car' || mode === 'cab') return '🏁';
+    if (mode === 'ferry') return '⚓';
+    return '🔴';
+  }
 
   toggleStopExpanded(stopId: string): void {
     this.expandedStops.update(prev => {
@@ -204,14 +261,52 @@ export class TripPlannerComponent implements OnInit {
 
   activeTripChecklistStats = computed(() => {
     const trip = this.activeTrip();
-    if (!trip?.destinations) return { completed: 0, total: 0, percent: 0 };
-    let completed = 0, total = 0;
-    trip.destinations.forEach(d => {
+    if (!trip) return { completed: 0, total: 0, percent: 0 };
+    
+    let completed = 0;
+    let total = 0;
+    const now = new Date().getTime();
+
+    // 1. Destination Visits (Visits marked completed)
+    const dests = trip.destinations || [];
+    total += dests.length;
+    completed += dests.filter(d => d.is_completed).length;
+
+    // 2. Spot Checklist Tasks
+    dests.forEach(d => {
       const tasks = this.getTasksOnly(d.checklist_items);
       total += tasks.length;
       completed += tasks.filter(i => i.is_completed).length;
     });
-    return { completed, total, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
+
+    // 3. Transport Passes (Completed automatically if transport date/time has passed)
+    const trans = trip.transportation || [];
+    total += trans.length;
+    trans.forEach(tr => {
+      const dateStr = tr.departure_time || tr.arrival_time;
+      if (dateStr) {
+        const ts = new Date(dateStr).getTime();
+        if (!isNaN(ts) && ts <= now) {
+          completed++;
+        }
+      }
+    });
+
+    // 4. Hotel Stays (Completed automatically if check-out date/time has passed)
+    const stays = dests.filter(d => d.stay_name);
+    total += stays.length;
+    stays.forEach(s => {
+      const stayDate = s.stay_check_out || s.stay_check_in;
+      if (stayDate) {
+        const ts = new Date(stayDate).getTime();
+        if (!isNaN(ts) && ts <= now) {
+          completed++;
+        }
+      }
+    });
+
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percent };
   });
 
   totalStaysAdded = computed(() => {
@@ -270,6 +365,7 @@ export class TripPlannerComponent implements OnInit {
 
   // Manual override order for drag-reordered events (keyed by trip id)
   manualTimelineOrder = signal<Record<string, string[]>>({});
+  savedTimelineOrder = signal<Record<string, string[]>>({});
   isDraggingOver = signal<string | null>(null);
   draggingId = signal<string | null>(null);
 
@@ -278,43 +374,57 @@ export class TripPlannerComponent implements OnInit {
     if (!trip) return [];
     const events: any[] = [];
 
-    // Robust timestamp parser supporting ISO, text formats ("23 Mar, 07:00"), and year normalization
+    // Robust timestamp parser supporting DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, text formats, and year normalization
     const parseTs = (val: string | null | undefined): number | null => {
       if (!val || typeof val !== 'string') return null;
       const trimmed = val.trim();
       if (!trimmed) return null;
 
-      // Extract reference year from trip start date or current year (e.g. 2026)
-      const currentYear = trip.start_date ? new Date(trip.start_date).getFullYear() : new Date().getFullYear();
+      const currentYear = trip.start_date ? new Date(trip.start_date).getFullYear() : 2026;
 
-      // 1. Try ISO cleaning
-      const cleaned = trimmed.includes(' ') && !trimmed.includes('T') ? trimmed.replace(' ', 'T') : trimmed;
-      let d = new Date(cleaned);
-      if (!isNaN(d.getTime())) {
-        if (d.getFullYear() < 2000) d.setFullYear(currentYear);
-        return d.getTime();
+      // 1. Format: DD-MM-YYYY or DD/MM/YYYY (e.g. "25-03-2024" or "25/03/2026")
+      const dmyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[T\s](\d{1,2}):(\d{2}))?/);
+      if (dmyMatch) {
+        const day = parseInt(dmyMatch[1], 10);
+        const monthIdx = parseInt(dmyMatch[2], 10) - 1;
+        const hh = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
+        const mm = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
+        const d = new Date(currentYear, monthIdx, day, hh, mm);
+        if (!isNaN(d.getTime())) return d.getTime();
       }
 
-      // 2. Try raw string
-      d = new Date(trimmed);
-      if (!isNaN(d.getTime())) {
-        if (d.getFullYear() < 2000) d.setFullYear(currentYear);
-        return d.getTime();
+      // 2. Format: YYYY-MM-DD or YYYY/MM/DD (e.g. "2024-03-25" or "2026-03-25T12:38")
+      const ymdMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s](\d{1,2}):(\d{2}))?/);
+      if (ymdMatch) {
+        const monthIdx = parseInt(ymdMatch[2], 10) - 1;
+        const day = parseInt(ymdMatch[3], 10);
+        const hh = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+        const mm = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+        const d = new Date(currentYear, monthIdx, day, hh, mm);
+        if (!isNaN(d.getTime())) return d.getTime();
       }
 
-      // 3. Match format like "23 Mar, 07:00" or "23 Mar 07:00" or "23 Mar"
-      const match = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)(?:,?\s+(\d{1,2}):(\d{2}))?/);
-      if (match) {
-        const day = parseInt(match[1], 10);
-        const monthStr = match[2].toLowerCase();
-        const hour = match[3] ? parseInt(match[3], 10) : 0;
-        const min = match[4] ? parseInt(match[4], 10) : 0;
+      // 3. Format: "25 Mar", "Wed 25 Mar", "25 Mar, 12:38"
+      const textMatch = trimmed.match(/(?:[A-Za-z]+\s+)?(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?(?:,?\s+(\d{1,2}):(\d{2}))?/);
+      if (textMatch) {
+        const day = parseInt(textMatch[1], 10);
+        const monthStr = textMatch[2].toLowerCase();
+        const hh = textMatch[4] ? parseInt(textMatch[4], 10) : 0;
+        const mm = textMatch[5] ? parseInt(textMatch[5], 10) : 0;
         const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
         const monthIdx = months.findIndex(m => monthStr.startsWith(m));
         if (monthIdx !== -1) {
-          const parsedD = new Date(currentYear, monthIdx, day, hour, min);
-          if (!isNaN(parsedD.getTime())) return parsedD.getTime();
+          const d = new Date(currentYear, monthIdx, day, hh, mm);
+          if (!isNaN(d.getTime())) return d.getTime();
         }
+      }
+
+      // 4. Fallback standard Date
+      const cleaned = trimmed.includes(' ') && !trimmed.includes('T') ? trimmed.replace(' ', 'T') : trimmed;
+      const d = new Date(cleaned);
+      if (!isNaN(d.getTime())) {
+        d.setFullYear(currentYear);
+        return d.getTime();
       }
 
       return null;
@@ -326,6 +436,16 @@ export class TripPlannerComponent implements OnInit {
       const dateVal = tr.departure_time || tr.arrival_time || null;
       const ts = parseTs(dateVal);
 
+      let arrTimeStr = '';
+      if (tr.arrival_time) {
+        const arrTs = parseTs(tr.arrival_time);
+        if (arrTs) {
+          arrTimeStr = ' (Arrive: ' + new Date(arrTs).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }) + ')';
+        } else if (typeof tr.arrival_time === 'string' && tr.arrival_time.trim()) {
+          arrTimeStr = ' (Arrive: ' + tr.arrival_time + ')';
+        }
+      }
+
       events.push({
         id: 'trans-' + tr.id,
         rawDate: dateVal,
@@ -334,10 +454,10 @@ export class TripPlannerComponent implements OnInit {
         typePriority: 0, // 1st Priority on same date/time
         icon: cfg.icon,
         displayDate: dateVal && ts
-          ? new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          ? new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
           : 'Flexible / Undated',
         title: tr.carrier_or_name || cfg.label + ' Pass',
-        subtitle: (tr.origin || 'Departure') + ' ➔ ' + (tr.destination_name || 'Arrival'),
+        subtitle: (tr.origin || 'Departure') + ' ➔ ' + (tr.destination_name || 'Arrival') + arrTimeStr,
         refText: tr.ticket_no ? '🎫 Ticket: ' + tr.ticket_no : (tr.pnr_no ? '🔢 PNR: ' + tr.pnr_no : null),
         notes: tr.notes,
         rawTransport: tr,
@@ -358,7 +478,7 @@ export class TripPlannerComponent implements OnInit {
           typePriority: 1, // 2nd Priority on same date/time (after transport, before destination visit)
           icon: '🏨',
           displayDate: stayDate && stayTs
-            ? new Date(stayTs).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            ? new Date(stayTs).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
             : 'Hotel Check-in',
           title: stop.stay_name,
           subtitle: stop.stay_address ? ('📍 ' + stop.stay_address) : ('Location: ' + stop.place_name),
@@ -379,33 +499,91 @@ export class TripPlannerComponent implements OnInit {
         typePriority: 2, // 3rd Priority on same date/time
         icon: '📍',
         displayDate: destDate && destTs
-          ? new Date(destTs).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+          ? (destDate.includes('T') || destDate.includes(':')
+              ? new Date(destTs).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+              : new Date(destTs).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }))
           : 'Stop #' + (idx + 1) + ' (Undated)',
         title: stop.place_name,
         subtitle: stop.stay_name ? '🏨 Stay: ' + stop.stay_name : '📍 Destination Visit',
         refText: stop.ticket_price ? ('🎟️ Ticket: ₹' + stop.ticket_price) : null,
         notes: null,
-        checklist: stop.checklist_items || [],
+        checklist: this.getTasksOnly(stop.checklist_items),
         rawStop: stop,
       });
     });
 
-    // STRICT CHRONOLOGICAL SORT:
+    // Assign effective timestamp for date-only Destination/Stay nodes (default to 12:00 PM Noon if no time set)
+    // so morning arrival trains (07:08 AM) sort BEFORE the visit, and evening departure trains (19:30 PM) sort AFTER!
+    events.forEach(e => {
+      if (e.ts !== null && e.typePriority > 0) {
+        const raw = String(e.rawDate || '');
+        if (!raw.includes('T') && !raw.includes(':')) {
+          const d = new Date(e.ts);
+          d.setHours(12, 0, 0, 0); // Default date-only visits to 12:00 PM (Noon)
+          e.ts = d.getTime();
+        }
+      }
+    });
+
+    // STRICT CHRONOLOGICAL TIME SORT:
     // 1. Undated items (ts === null) go to very end
-    // 2. Earliest timestamp FIRST (Date ASC: 23 Mar -> 26 Mar -> 28 Mar -> 30 Mar -> 31 Aug)
-    // 3. Same timestamp: Transport (0) -> Hotel Stay (1) -> Destination (2)
+    // 2. Exact Timestamp Flow (ASC): Morning Train (07:08) -> Daytime Destination Visit (12:00) -> Evening Train (19:30)
+    // 3. Same Timestamp / Time: Transport (0) FIRST -> Hotel Stay (1) SECOND -> Destination (2) THIRD
     events.sort((a, b) => {
       if (a.ts === null && b.ts === null) return a.typePriority - b.typePriority;
       if (a.ts === null) return 1;
       if (b.ts === null) return -1;
+
+      // 1. Primary: Compare exact timestamp / time of day (ASC)
       if (a.ts !== b.ts) {
-        return a.ts - b.ts; // Strict Chronological Date Flow
+        return a.ts - b.ts;
       }
-      return a.typePriority - b.typePriority; // Transport -> Stay -> Destination
+
+      // 2. Secondary (Same Date & Time): Transport (0) -> Hotel Stay (1) -> Destination (2)
+      return a.typePriority - b.typePriority;
     });
+
+    // Apply manual drag / button reorder override if present for this trip
+    const manualOrder = this.manualTimelineOrder()[trip.id];
+    if (manualOrder && manualOrder.length > 0) {
+      const eventMap = new Map(events.map(e => [e.id, e]));
+      const reordered: any[] = [];
+      manualOrder.forEach(id => {
+        if (eventMap.has(id)) {
+          reordered.push(eventMap.get(id));
+          eventMap.delete(id);
+        }
+      });
+      eventMap.forEach(e => reordered.push(e));
+      return reordered;
+    }
 
     return events;
   });
+
+  moveTimelineItem(eventId: string, direction: 'up' | 'down'): void {
+    const trip = this.activeTrip();
+    if (!trip) return;
+    const events = [...this.timelineEvents()];
+    const index = events.findIndex(e => e.id === eventId);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= events.length) return;
+
+    const updatedEvents = [...events];
+    const temp = updatedEvents[index];
+    updatedEvents[index] = updatedEvents[targetIndex];
+    updatedEvents[targetIndex] = temp;
+
+    const newOrder = updatedEvents.map(e => e.id);
+    this.manualTimelineOrder.update(prev => ({
+      ...prev,
+      [trip.id]: newOrder
+    }));
+
+    this.toast.success(`Position updated!`);
+  }
 
   generateTimeline(): void {
     const trip = this.activeTrip();
@@ -468,6 +646,20 @@ export class TripPlannerComponent implements OnInit {
     this.isDraggingOver.set(null);
   }
 
+  saveTimelineOrder(): void {
+    const trip = this.activeTrip();
+    if (!trip) return;
+    const currentOrder = this.manualTimelineOrder()[trip.id] || [];
+    this.savedTimelineOrder.update(prev => ({
+      ...prev,
+      [trip.id]: currentOrder
+    }));
+    try {
+      localStorage.setItem(`wanderlust_timeline_order_${trip.id}`, JSON.stringify(currentOrder));
+    } catch (e) {}
+    this.toast.success('💾 Timeline order saved successfully!');
+  }
+
   resetTimelineOrder(): void {
     const trip = this.activeTrip();
     if (!trip) return;
@@ -476,12 +668,46 @@ export class TripPlannerComponent implements OnInit {
       delete copy[trip.id];
       return copy;
     });
-    this.toast.info('Timeline reset to chronological order.');
+    this.savedTimelineOrder.update(prev => {
+      const copy = { ...prev };
+      delete copy[trip.id];
+      return copy;
+    });
+    try {
+      localStorage.removeItem(`wanderlust_timeline_order_${trip.id}`);
+    } catch (e) {}
+    this.toast.info('🔄 Timeline order reset to strict chronological date order.');
   }
 
   hasManualOrder(): boolean {
     const trip = this.activeTrip();
-    return !!trip && !!(this.manualTimelineOrder()[trip.id]);
+    return !!trip && !!(this.manualTimelineOrder()[trip.id] && this.manualTimelineOrder()[trip.id].length > 0);
+  }
+
+  hasSavedOrder(): boolean {
+    const trip = this.activeTrip();
+    return !!trip && !!(this.savedTimelineOrder()[trip.id] && this.savedTimelineOrder()[trip.id].length > 0);
+  }
+
+  hasUnsavedOrder(): boolean {
+    const trip = this.activeTrip();
+    if (!trip) return false;
+    const current = JSON.stringify(this.manualTimelineOrder()[trip.id] || []);
+    const saved = JSON.stringify(this.savedTimelineOrder()[trip.id] || []);
+    return current !== saved;
+  }
+
+  loadSavedOrderForActiveTrip(tripId: string): void {
+    try {
+      const stored = localStorage.getItem(`wanderlust_timeline_order_${tripId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.savedTimelineOrder.update(prev => ({ ...prev, [tripId]: parsed }));
+          this.manualTimelineOrder.update(prev => ({ ...prev, [tripId]: parsed }));
+        }
+      }
+    } catch (e) {}
   }
 
   async ngOnInit(): Promise<void> {
@@ -489,10 +715,17 @@ export class TripPlannerComponent implements OnInit {
     if (!user) { this.toast.info('Please sign in'); this.router.navigate(['/auth'], { queryParams: { returnUrl: '/trips' } }); return; }
     await this.destService.getDestinations();
     const trips = await this.tripService.loadUserTrips(user.id);
-    if (trips.length > 0 && !this.activeTrip()) this.activeTrip.set(trips[0]);
+    if (trips.length > 0 && !this.activeTrip()) {
+      this.activeTrip.set(trips[0]);
+      this.loadSavedOrderForActiveTrip(trips[0].id);
+    }
   }
 
-  selectTrip(trip: Trip): void { this.activeTrip.set(trip); this.viewMode.set('grid'); }
+  selectTrip(trip: Trip): void {
+    this.activeTrip.set(trip);
+    this.loadSavedOrderForActiveTrip(trip.id);
+    this.viewMode.set('grid');
+  }
 
   openCreateModal(): void { this.isEditingTrip.set(false); this.newTripTitle.set(''); this.newTripStartDate.set(''); this.newTripEndDate.set(''); this.newTripNotes.set(''); this.showCreateModal.set(true); }
   openEditTripModal(trip: Trip): void {
@@ -665,8 +898,8 @@ export class TripPlannerComponent implements OnInit {
     this.editingStop.set(stop);
     this.stopPlaceName.set(stop.place_name);
     this.stopDestinationId.set(stop.destination_id || '');
-    this.stopArrivalDate.set(this.formatForDateInput(stop.arrival_date));
-    this.stopDepartureDate.set(this.formatForDateInput(stop.departure_date));
+    this.stopArrivalDate.set(this.formatForDateTimeLocalInput(stop.arrival_date));
+    this.stopDepartureDate.set(this.formatForDateTimeLocalInput(stop.departure_date));
     this.showStopModal.set(true);
   }
 
@@ -679,7 +912,12 @@ export class TripPlannerComponent implements OnInit {
     const trip = this.activeTrip();
     if (!trip) return;
     if (!this.stopPlaceName().trim()) { this.toast.warning('Please enter a place name'); return; }
-    const payload: Partial<TripDestination> = { place_name: this.stopPlaceName().trim(), destination_id: this.stopDestinationId() || null, arrival_date: this.stopArrivalDate() || null, departure_date: this.stopDepartureDate() || null };
+    const payload: Partial<TripDestination> = {
+      place_name: this.stopPlaceName().trim(),
+      destination_id: this.stopDestinationId() || null,
+      arrival_date: this.stopArrivalDate() || null,
+      departure_date: this.stopDepartureDate() || null
+    };
     const editSt = this.editingStop();
     if (editSt?.id) {
       const { error } = await this.tripService.updateTripDestination(trip.id, editSt.id, payload);
@@ -698,59 +936,56 @@ export class TripPlannerComponent implements OnInit {
   }
 
   openAddStayModal(): void {
-    const trip = this.activeTrip();
-    if (!trip?.destinations || trip.destinations.length === 0) {
-      this.toast.info('Please add a destination stop first!');
-      this.openStopModal();
-      return;
-    }
-    const targetStop = trip.destinations.find(d => !d.stay_name) || trip.destinations[0];
-    this.openStayModal(targetStop);
+    this.openStayModal(null);
   }
 
-  openStayModal(stop: TripDestination): void {
+  openStayModal(stop: TripDestination | null): void {
     this.stayForStop.set(stop);
-    this.stayOriginalStopId.set(stop.id || null);
-    this.stayName.set(stop.stay_name || '');
-    this.stayAddress.set(stop.stay_address || '');
-    this.stayBookingRef.set(stop.stay_booking_ref || '');
-    this.stayBookingPlatform.set(stop.stay_booking_platform || '');
-    this.stayBookingPlatformOther.set(stop.stay_booking_platform_other || '');
-    this.stayCheckIn.set(this.formatForDateTimeLocalInput(stop.stay_check_in));
-    this.stayCheckOut.set(this.formatForDateTimeLocalInput(stop.stay_check_out));
-    this.stayRate.set(stop.stay_rate || '');
-    this.stayStatus.set((stop.stay_status as any) || '');
-    this.stayRefundStatus.set((stop.stay_refund_status as any) || '');
-    this.stayContact.set(stop.stay_contact || '');
-    this.stayRoomType.set(stop.stay_room_type || '');
-    this.stayNotes.set(stop.stay_notes || '');
+    this.stayOriginalStopId.set(stop?.id || null);
+    this.stayName.set(stop?.stay_name || '');
+    this.stayAddress.set(stop?.stay_address || '');
+    this.stayBookingRef.set(stop?.stay_booking_ref || '');
+    this.stayBookingPlatform.set(stop?.stay_booking_platform || '');
+    this.stayBookingPlatformOther.set(stop?.stay_booking_platform_other || '');
+    this.stayCheckIn.set(this.formatForDateTimeLocalInput(stop?.stay_check_in));
+    this.stayCheckOut.set(this.formatForDateTimeLocalInput(stop?.stay_check_out));
+    this.stayRate.set(stop?.stay_rate || '');
+    this.stayStatus.set((stop?.stay_status as any) || '');
+    this.stayRefundStatus.set((stop?.stay_refund_status as any) || '');
+    this.stayContact.set(stop?.stay_contact || '');
+    this.stayRoomType.set(stop?.stay_room_type || '');
+    this.stayNotes.set(stop?.stay_notes || '');
+    const dur = stop?.stay_duration || '';
+    this.stayDuration.set(dur);
+    if (['6 Hours', '12 Hours', '24 Hours (1 Day)', '48 Hours (2 Days)'].includes(dur)) {
+      this.stayDurationPreset.set(dur);
+    } else if (dur) {
+      this.stayDurationPreset.set('custom');
+    } else {
+      this.stayDurationPreset.set('');
+    }
     this.showStayModal.set(true);
   }
 
   onStayStopSelect(stopId: string): void {
     const trip = this.activeTrip();
-    if (!trip?.destinations) return;
-    const found = trip.destinations.find(d => d.id === stopId);
+    if (!trip) return;
+    if (!stopId || stopId === 'none') {
+      this.stayForStop.set(null);
+      return;
+    }
+    const found = (trip.destinations || []).find(d => d.id === stopId);
     if (found) {
-      // Re-link stay to the selected destination stop WITHOUT overwriting form fields!
       this.stayForStop.set(found);
     }
   }
 
   async saveStay(): Promise<void> {
     const trip = this.activeTrip();
-    const stop = this.stayForStop();
-    if (!trip || !stop?.id) return;
-
-    const originalStopId = this.stayOriginalStopId();
-    // If stay was moved to a different destination stop, clear stay details from the original stop first
-    if (originalStopId && originalStopId !== stop.id) {
-      await this.tripService.updateTripDestination(trip.id, originalStopId, {
-        stay_name: null, stay_address: null, stay_booking_ref: null, stay_booking_platform: null,
-        stay_booking_platform_other: null, stay_check_in: null, stay_check_out: null,
-        stay_rate: null, stay_status: null, stay_refund_status: null,
-        stay_contact: null, stay_room_type: null, stay_notes: null,
-      });
+    if (!trip) return;
+    if (!this.stayName().trim()) {
+      this.toast.warning('Please enter a Hotel / Stay name!');
+      return;
     }
 
     const payload: Partial<TripDestination> = {
@@ -767,9 +1002,47 @@ export class TripPlannerComponent implements OnInit {
       stay_contact: this.stayContact().trim() || null,
       stay_room_type: this.stayRoomType().trim() || null,
       stay_notes: this.stayNotes().trim() || null,
+      stay_duration: this.stayDuration().trim() || null,
     };
-    const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, payload);
-    if (!error) { this.toast.success('Stay details saved!'); this.refreshActiveTrip(trip.id); this.showStayModal.set(false); } else { this.toast.error('Failed to save stay.'); }
+
+    const stop = this.stayForStop();
+    if (stop?.id) {
+      const originalStopId = this.stayOriginalStopId();
+      if (originalStopId && originalStopId !== stop.id) {
+        await this.tripService.updateTripDestination(trip.id, originalStopId, {
+          stay_name: null, stay_address: null, stay_booking_ref: null, stay_booking_platform: null,
+          stay_booking_platform_other: null, stay_check_in: null, stay_check_out: null,
+          stay_rate: null, stay_status: null, stay_refund_status: null,
+          stay_contact: null, stay_room_type: null, stay_notes: null,
+        });
+      }
+      const { error } = await this.tripService.updateTripDestination(trip.id, stop.id, payload);
+      if (!error) {
+        this.toast.success('Stay details saved!');
+        this.refreshActiveTrip(trip.id);
+        this.showStayModal.set(false);
+      } else {
+        this.toast.error('Failed to save stay.');
+      }
+    } else {
+      // Create a standalone hotel stay record!
+      const placeName = this.stayName().trim() || 'Hotel Stay';
+      const { data, error } = await this.tripService.addTripDestination(trip.id, {
+        place_name: placeName,
+        arrival_date: this.stayCheckIn() || null,
+        departure_date: this.stayCheckOut() || null,
+        ...payload,
+        checklist_items: [],
+        order_index: (trip.destinations?.length || 0) + 1
+      });
+      if (!error && data) {
+        this.toast.success(placeName + ' booking added!');
+        this.refreshActiveTrip(trip.id);
+        this.showStayModal.set(false);
+      } else {
+        this.toast.error('Failed to add stay.');
+      }
+    }
   }
 
   async removeStay(stop: TripDestination): Promise<void> {

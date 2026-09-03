@@ -63,6 +63,7 @@ ALTER TABLE public.trip_destinations
   ADD COLUMN IF NOT EXISTS stay_contact                 TEXT,
   ADD COLUMN IF NOT EXISTS stay_room_type               TEXT,
   ADD COLUMN IF NOT EXISTS stay_notes                   TEXT,
+  ADD COLUMN IF NOT EXISTS stay_duration                TEXT,
   ADD COLUMN IF NOT EXISTS ticket_required              BOOLEAN,
   ADD COLUMN IF NOT EXISTS ticket_booking_url           TEXT,
   ADD COLUMN IF NOT EXISTS ticket_booking_ref           TEXT,

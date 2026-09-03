@@ -3,7 +3,6 @@
   <header class="planner-hero">
     <div class="container">
       <div class="hero-content">
-        <span class="hero-badge">✈️ INTERACTIVE TRIP PLANNER</span>
         <h1 class="hero-title">
           Plan Your Next <em>Unforgettable Journey</em>
         </h1>
@@ -147,14 +146,14 @@
                 <button
                   class="stat-chip"
                   (click)="scrollToSection('section-destinations')"
-                  title="Go to Checklists"
+                  title="Comprehensive Journey Progress across Transport, Hotel Check-outs, Visited Destinations, and Checklist Tasks"
                 >
-                  <span class="stat-icon">🎯</span>
+                  <span class="stat-icon">📈</span>
                   <span
-                    >{{ activeTripChecklistStats().completed }}/{{
+                    >Progress: {{ activeTripChecklistStats().completed }}/{{
                       activeTripChecklistStats().total
                     }}
-                    Tasks</span
+                    ({{ activeTripChecklistStats().percent }}%)</span
                   >
                 </button>
               </div>
@@ -204,37 +203,49 @@
             @if (viewMode() === "timeline") {
               <div class="timeline-view-container glass-card">
                 <div class="timeline-header">
-                  <div class="timeline-title-row">
-                    <div>
-                      <h3 class="timeline-title">⏳ Visual Journey Timeline</h3>
-                      <p class="timeline-sub">
-                        Sorted chronologically — transport passes appear
-                        <strong>before</strong> same-day destinations.
-                        <strong>Drag ⠿ any card to reorder manually.</strong>
-                      </p>
+                  <div class="timeline-header-left">
+                    <h3 class="timeline-title">⏳ Visual Journey Timeline</h3>
+                    <p class="timeline-sub">
+                      Sorted chronologically — drag ⠿ or use ▲▼ buttons to reorder items manually.
+                    </p>
+                  </div>
+
+                  <div class="timeline-header-right">
+                    <div class="timeline-legend">
+                      <span class="legend-chip transport-legend"
+                        >✈️ Transport</span
+                      >
+                      <span class="legend-chip stay-legend"
+                        >🏨 Hotel Stay</span
+                      >
+                      <span class="legend-chip dest-legend"
+                        >📍 Destination</span
+                      >
                     </div>
-                    <div class="timeline-header-actions">
+
+                    <div class="timeline-ctrl-btns">
+                      @if (hasUnsavedOrder()) {
+                        <button
+                          class="btn-save-order pulse-glow"
+                          (click)="saveTimelineOrder()"
+                          title="Save custom timeline order"
+                        >
+                          💾 Save Timeline Order
+                        </button>
+                      }
+
                       <button
-                        class="btn-ghost-sm"
+                        class="btn-timeline-ctrl"
                         (click)="toggleAllTimelineItems(!areAllTimelineItemsExpanded())"
                       >
                         {{ areAllTimelineItemsExpanded() ? '▲ Collapse Details' : '▼ Expand Details' }}
                       </button>
-                      <div class="timeline-legend">
-                        <span class="legend-chip transport-legend"
-                          >✈️ Transport</span
-                        >
-                        <span class="legend-chip stay-legend"
-                          >🏨 Hotel Stay</span
-                        >
-                        <span class="legend-chip dest-legend"
-                          >📍 Destination</span
-                        >
-                      </div>
-                      @if (hasManualOrder()) {
+
+                      @if (hasManualOrder() || hasSavedOrder()) {
                         <button
                           class="btn-reset-order"
                           (click)="resetTimelineOrder()"
+                          title="Reset timeline back to strict date/time chronological order"
                         >
                           🔄 Reset to Chronological
                         </button>
@@ -330,6 +341,10 @@
                                   <span class="chk-text">{{ evt.rawStop.is_completed ? 'Visited' : 'Mark Visited' }}</span>
                                 </button>
                               }
+                              <div class="pos-move-btn-group" title="Reorder position (Mobile & Desktop)">
+                                <button class="btn-pos-move" (click)="moveTimelineItem(evt.id, 'up')" title="Move Up">▲</button>
+                                <button class="btn-pos-move" (click)="moveTimelineItem(evt.id, 'down')" title="Move Down">▼</button>
+                              </div>
                               <button class="btn-toggle-details" (click)="toggleTimelineExpanded(evt.id)">
                                 {{ isTimelineExpanded(evt.id) ? '▲ Hide' : '▼ Details' }}
                               </button>
@@ -370,6 +385,13 @@
                             <div class="timeline-expanded-details">
                               @if (evt.type === 'transport' && evt.rawTransport) {
                                 <div class="tl-details-grid">
+                                  @if (evt.rawTransport.departure_time || evt.rawTransport.arrival_time) {
+                                    <div class="trans-bus-no-chip">
+                                      🕞 <strong>Timing:</strong> 
+                                      {{ evt.rawTransport.departure_time ? 'Dep: ' + (evt.rawTransport.departure_time | date: 'h:mm a') : '' }} 
+                                      {{ evt.rawTransport.arrival_time ? ' ➔ Arr: ' + (evt.rawTransport.arrival_time | date: 'h:mm a') : '' }}
+                                    </div>
+                                  }
                                   @if (evt.rawTransport.bus_no) {
                                     <div class="trans-bus-no-chip">🚌 <strong>Bus No:</strong> {{ evt.rawTransport.bus_no }}</div>
                                   }
@@ -565,12 +587,14 @@
                           </button>
                         </div>
                       </div>
+
                       <div class="trans-card-body">
                         @if (tr.carrier_or_name) {
                           <h4 class="trans-carrier">
                             {{ tr.carrier_or_name }}
                           </h4>
                         }
+
                         @if (tr.mode === "irctc_dormitory") {
                           <div class="irctc-platform-badge">
                             🚉 IRCTC Platform
@@ -582,73 +606,21 @@
                           }
                           @if (tr.departure_time && tr.arrival_time) {
                             <div class="trans-times">
-                              <span
-                                >🛏️ Check-in:
-                                {{
-                                  tr.departure_time | date: "MMM d, h:mm a"
-                                }}</span
-                              >
-                              <span
-                                >🚪 Check-out:
-                                {{
-                                  tr.arrival_time | date: "MMM d, h:mm a"
-                                }}</span
-                              >
-                              @if (
-                                getDormitoryDuration(
-                                  tr.departure_time,
-                                  tr.arrival_time
-                                )
-                              ) {
-                                <span class="dorm-duration-badge"
-                                  >⏱️
-                                  {{
-                                    getDormitoryDuration(
-                                      tr.departure_time,
-                                      tr.arrival_time
-                                    )
-                                  }}</span
-                                >
-                              }
+                              <span>🛏️ Check-in: {{ tr.departure_time | date: "MMM d, h:mm a" }}</span>
+                              <span>🚪 Check-out: {{ tr.arrival_time | date: "MMM d, h:mm a" }}</span>
                             </div>
-                          }
-                          @if (tr.destination_name) {
-                            <p class="trans-ticket">
-                              💸 <strong>Amount:</strong>
-                              {{ tr.destination_name }}
-                            </p>
                           }
                         } @else {
-                          @if (tr.bus_no) {
-                            <div class="trans-bus-no-chip">
-                              🚌 <strong>Bus No:</strong> {{ tr.bus_no }}
-                            </div>
-                          }
                           @if (tr.ticket_no) {
                             <p class="trans-ticket">
                               🎫 <strong>Ticket:</strong> {{ tr.ticket_no }}
                             </p>
-                          }
-                          @if (tr.pnr_no) {
+                          } @else if (tr.pnr_no) {
                             <p class="trans-ticket">
-                              🔢 <strong>PNR No:</strong> {{ tr.pnr_no }}
+                              🔢 <strong>PNR:</strong> {{ tr.pnr_no }}
                             </p>
                           }
-                          @if (tr.amount) {
-                            <p class="trans-amount-chip">
-                              💸 <strong>Amount:</strong> {{ tr.amount }}
-                            </p>
-                          }
-                          @if (tr.booking_platform) {
-                            <div class="trans-platform-tag">
-                              {{ getTransPlatformIcon(tr.booking_platform) }}
-                              @if (tr.booking_platform === 'other' && tr.booking_platform_other) {
-                                {{ tr.booking_platform_other }}
-                              } @else {
-                                {{ getTransPlatformLabel(tr.booking_platform) }}
-                              }
-                            </div>
-                          }
+
                           @if (tr.origin || tr.destination_name) {
                             <p class="trans-route">
                               📍 <strong>Route:</strong>
@@ -656,26 +628,58 @@
                               {{ tr.destination_name || "Arrival" }}
                             </p>
                           }
+
                           @if (tr.departure_time || tr.arrival_time) {
                             <div class="trans-times">
                               @if (tr.departure_time) {
-                                <span
-                                  >🛫
-                                  {{ tr.departure_time | date: "MMM d, h:mm a" }}</span
-                                >
+                                <span>{{ getDepIcon(tr.mode) }} <strong>Departure:</strong> {{ tr.departure_time | date: "MMM d, h:mm a" }}</span>
                               }
                               @if (tr.arrival_time) {
-                                <span
-                                  >🛬
-                                  {{ tr.arrival_time | date: "MMM d, h:mm a" }}</span
-                                >
+                                <span>{{ getArrIcon(tr.mode) }} <strong>Arrival:</strong> {{ tr.arrival_time | date: "MMM d, h:mm a" }}</span>
                               }
                             </div>
                           }
                         }
-                        @if (tr.notes) {
-                          <p class="trans-notes">💡 {{ tr.notes }}</p>
+
+                        <!-- Collapsible Extra Details Dropdown -->
+                        @if (isGridTransportExpanded(tr.id!)) {
+                          <div class="trans-grid-dropdown-box">
+                            @if (tr.bus_no) {
+                              <div class="trans-bus-no-chip">
+                                🚌 <strong>Bus No:</strong> {{ tr.bus_no }}
+                              </div>
+                            }
+                            @if (tr.ticket_no && tr.pnr_no) {
+                              <p class="trans-ticket">
+                                🔢 <strong>PNR No:</strong> {{ tr.pnr_no }}
+                              </p>
+                            }
+                            @if (tr.amount) {
+                              <p class="trans-amount-chip">
+                                💸 <strong>Amount:</strong> {{ tr.amount }}
+                              </p>
+                            }
+                            @if (tr.booking_platform) {
+                              <div class="trans-platform-tag">
+                                {{ getTransPlatformIcon(tr.booking_platform) }}
+                                @if (tr.booking_platform === 'other' && tr.booking_platform_other) {
+                                  {{ tr.booking_platform_other }}
+                                } @else {
+                                  {{ getTransPlatformLabel(tr.booking_platform) }}
+                                }
+                              </div>
+                            }
+                            @if (tr.notes) {
+                              <p class="trans-notes">💡 {{ tr.notes }}</p>
+                            }
+                          </div>
                         }
+                      </div>
+
+                      <div class="trans-card-footer-bar">
+                        <button class="btn-toggle-grid-details" (click)="toggleGridTransportExpanded(tr.id!)">
+                          {{ isGridTransportExpanded(tr.id!) ? '▲ Less Details' : '▼ View Details' }}
+                        </button>
                       </div>
                     </div>
                   }
@@ -695,7 +699,7 @@
                     your journey.
                   </p>
                 </div>
-                <button class="btn-primary" (click)="openAddStayModal()">
+                <button class="btn-secondary" (click)="openAddStayModal()">
                   + Add Hotel / Stay
                 </button>
               </div>
@@ -703,7 +707,10 @@
               @if (destinationsWithStays().length === 0) {
                 <div class="empty-sub-card glass-card">
                   <span>🏨</span>
-                  <p>No hotel or accommodation bookings added yet.</p>
+                  <p>
+                    No hotel bookings added yet. Link a stay to any of your
+                    destinations!
+                  </p>
                   <button class="btn-secondary" (click)="openAddStayModal()">
                     + Add Hotel / Stay Booking
                   </button>
@@ -797,17 +804,6 @@
                           </div>
                         }
 
-                        @if (stop.stay_room_type) {
-                          <p class="stay-meta-row">
-                            🛏️ <strong>Room:</strong> {{ stop.stay_room_type }}
-                          </p>
-                        }
-                        @if (stop.stay_rate) {
-                          <p class="stay-meta-row">
-                            💸 <strong>Rate:</strong> {{ stop.stay_rate }}
-                          </p>
-                        }
-
                         @if (stop.stay_check_in || stop.stay_check_out) {
                           <div class="stay-times">
                             @if (stop.stay_check_in) {
@@ -829,26 +825,53 @@
                           </div>
                         }
 
-                        @if (stop.stay_booking_ref) {
-                          <p class="stay-ref-tag">
-                            🎫 <strong>Ref:</strong> {{ stop.stay_booking_ref }}
-                          </p>
+                        <!-- Collapsible Dropdown Extra Details -->
+                        @if (isGridStayExpanded(stop.id)) {
+                          <div class="stay-grid-dropdown-box">
+                            @if (stop.stay_duration) {
+                              <p class="stay-meta-row">
+                                ⏱️ <strong>Duration:</strong> {{ stop.stay_duration }}
+                              </p>
+                            }
+                            @if (stop.stay_room_type) {
+                              <p class="stay-meta-row">
+                                🛏️ <strong>Room:</strong> {{ stop.stay_room_type }}
+                              </p>
+                            }
+                            @if (stop.stay_rate) {
+                              <p class="stay-meta-row">
+                                💸 <strong>Rate:</strong> {{ stop.stay_rate }}
+                              </p>
+                            }
+                            @if (stop.stay_booking_ref) {
+                              <p class="stay-ref-tag">
+                                {{ stop.stay_booking_platform === 'irctc_dormitory' ? '🔢 Train PNR:' : '🎫 Ref:' }}
+                                <strong>{{ stop.stay_booking_ref }}</strong>
+                              </p>
+                            }
+                            @if (stop.stay_contact) {
+                              <p class="stay-meta-row">
+                                📞 <strong>Contact:</strong> {{ stop.stay_contact }}
+                              </p>
+                            }
+                            @if (stop.stay_address) {
+                              <p class="stay-addr-text">
+                                📍 {{ stop.stay_address }}
+                              </p>
+                            }
+                            @if (stop.stay_notes) {
+                              <p class="stay-personal-notes">
+                                📝 {{ stop.stay_notes }}
+                              </p>
+                            }
+                          </div>
                         }
-                        @if (stop.stay_contact) {
-                          <p class="stay-meta-row">
-                            📞 <strong>Contact:</strong> {{ stop.stay_contact }}
-                          </p>
-                        }
-                        @if (stop.stay_address) {
-                          <p class="stay-addr-text">
-                            📍 {{ stop.stay_address }}
-                          </p>
-                        }
-                        @if (stop.stay_notes) {
-                          <p class="stay-personal-notes">
-                            📝 {{ stop.stay_notes }}
-                          </p>
-                        }
+                      </div>
+
+                      <div class="stay-card-footer-bar">
+                        <button class="btn-toggle-grid-details" (click)="toggleGridStayExpanded(stop.id)">
+                          {{ isGridStayExpanded(stop.id) ? '▲ Less Details' : '▼ View Details' }}
+                        </button>
                       </div>
                     </div>
                   }
@@ -924,9 +947,6 @@
                         <!-- COLLAPSED QUICK PREVIEW CHIPS -->
                         @if (!isStopExpanded(stop.id!)) {
                           <div class="stop-preview-summary">
-                            @if (stop.is_completed) {
-                              <span class="preview-chip visited-chip">✅ Visited</span>
-                            }
                             @if (stop.stay_name) {
                               <span class="preview-chip stay-chip">🏨 {{ stop.stay_name }}</span>
                             }
@@ -1535,18 +1555,18 @@
         </div>
         <div class="form-row-2">
           <div class="form-group">
-            <label>Arrival Date (Optional)</label>
+            <label>Arrival / Visit Date & Time</label>
             <input
-              type="date"
+              type="datetime-local"
               class="form-input"
               [ngModel]="stopArrivalDate()"
               (ngModelChange)="stopArrivalDate.set($event)"
             />
           </div>
           <div class="form-group">
-            <label>Departure Date (Optional)</label>
+            <label>Departure Date & Time</label>
             <input
-              type="date"
+              type="datetime-local"
               class="form-input"
               [ngModel]="stopDepartureDate()"
               (ngModelChange)="stopDepartureDate.set($event)"
@@ -1573,28 +1593,25 @@
         (click)="$event.stopPropagation()"
       >
         <h3 class="modal-title">
-          🏨 Hotel / Stay Details — {{ stayForStop()?.place_name }}
+          🏨 Hotel / Stay Details {{ stayForStop()?.place_name ? ('— ' + stayForStop()?.place_name) : '' }}
         </h3>
 
         <!-- Destination Stop selector -->
-        @if (
-          activeTrip() &&
-          activeTrip()!.destinations &&
-          activeTrip()!.destinations!.length > 1
-        ) {
-          <div class="form-group full-width">
-            <label>Linked Destination Stop *</label>
-            <select
-              class="form-select"
-              [ngModel]="stayForStop()?.id"
-              (ngModelChange)="onStayStopSelect($event)"
-            >
+        <div class="form-group full-width">
+          <label>Linked Destination Stop (Optional)</label>
+          <select
+            class="form-select"
+            [ngModel]="stayForStop()?.id || 'none'"
+            (ngModelChange)="onStayStopSelect($event)"
+          >
+            <option value="none">-- Standalone Hotel Booking (Unlinked) --</option>
+            @if (activeTrip()?.destinations) {
               @for (d of activeTrip()!.destinations; track d.id) {
                 <option [value]="d.id">📍 {{ d.place_name }}</option>
               }
-            </select>
-          </div>
-        }
+            }
+          </select>
+        </div>
 
         <!-- Hotel Name -->
         <div class="form-group full-width">
@@ -1618,6 +1635,61 @@
             [ngModel]="stayRoomType()"
             (ngModelChange)="stayRoomType.set($event)"
           />
+        </div>
+
+        <!-- STAY DURATION & HOURS (6, 12, 24 hrs or custom) -->
+        <div class="form-group full-width">
+          <label>⏱️ Stay Duration / Hours (Optional)</label>
+          <div class="duration-preset-grid">
+            <button
+              type="button"
+              class="duration-chip"
+              [class.active]="stayDurationPreset() === '6 Hours'"
+              (click)="onStayDurationPresetSelect('6 Hours')"
+            >
+              ⏱️ 6 Hours
+            </button>
+            <button
+              type="button"
+              class="duration-chip"
+              [class.active]="stayDurationPreset() === '12 Hours'"
+              (click)="onStayDurationPresetSelect('12 Hours')"
+            >
+              ⏱️ 12 Hours
+            </button>
+            <button
+              type="button"
+              class="duration-chip"
+              [class.active]="stayDurationPreset() === '24 Hours (1 Day)'"
+              (click)="onStayDurationPresetSelect('24 Hours (1 Day)')"
+            >
+              🌙 24 Hours (1 Day)
+            </button>
+            <button
+              type="button"
+              class="duration-chip"
+              [class.active]="stayDurationPreset() === '48 Hours (2 Days)'"
+              (click)="onStayDurationPresetSelect('48 Hours (2 Days)')"
+            >
+              🏨 48 Hours (2 Days)
+            </button>
+            <button
+              type="button"
+              class="duration-chip"
+              [class.active]="stayDurationPreset() === 'custom'"
+              (click)="onStayDurationPresetSelect('custom')"
+            >
+              ✏️ Custom / Text
+            </button>
+          </div>
+
+          <textarea
+            class="form-input form-textarea mt-8"
+            rows="2"
+            placeholder="Type exact hours or duration details (e.g. 18 hours, 36 hours, 3 Days 2 Nights, 6 AM to 12 PM)..."
+            [ngModel]="stayDuration()"
+            (ngModelChange)="stayDuration.set($event)"
+          ></textarea>
         </div>
 
         <!-- Booking Platform grid -->
@@ -1645,16 +1717,29 @@
               (ngModelChange)="stayBookingPlatformOther.set($event)"
             />
           }
+          <!-- Dedicated PNR Field when "irctc_dormitory" is selected -->
+          @if (stayBookingPlatform() === "irctc_dormitory") {
+            <div class="pnr-field-box mt-8">
+              <label>🚉 Train PNR Number (IRCTC Reference) *</label>
+              <input
+                type="text"
+                class="form-input pnr-highlight-input"
+                placeholder="e.g. 10-digit IRCTC Train PNR #4829103951"
+                [ngModel]="stayBookingRef()"
+                (ngModelChange)="stayBookingRef.set($event)"
+              />
+            </div>
+          }
         </div>
 
         <!-- Booking Ref + Rate -->
         <div class="form-row-2">
           <div class="form-group">
-            <label>Booking Reference / Confirmation No. (Optional)</label>
+            <label>{{ stayBookingPlatform() === 'irctc_dormitory' ? 'Train PNR / Booking Ref' : 'Booking Reference / Confirmation No. (Optional)' }}</label>
             <input
               type="text"
               class="form-input"
-              placeholder="e.g. Booking.com #938291"
+              [placeholder]="stayBookingPlatform() === 'irctc_dormitory' ? 'e.g. 10-digit Train PNR #4829103951' : 'e.g. Booking.com #938291'"
               [ngModel]="stayBookingRef()"
               (ngModelChange)="stayBookingRef.set($event)"
             />
